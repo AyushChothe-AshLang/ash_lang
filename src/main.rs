@@ -20,7 +20,7 @@ fn main() {
     let ast = parser.parse();
     // print!("{:?}", ast);
 
-    let interpreter = Interpreter::new(ast);
+    let interpreter = Interpreter::new(*ast);
 
-    println!("{:?}", interpreter.eval().get_literal());
+    println!("{:?}", interpreter.eval());
 }

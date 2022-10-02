@@ -1,4 +1,4 @@
-use super::tokens::{Token, TokenType};
+use super::tokens::Token;
 // Lexer
 pub struct Lexer {
     code: String,
@@ -21,11 +21,6 @@ impl Lexer {
             panic!("Reached EOF")
         }
     }
-    fn add_token(&mut self, token_type: TokenType, value: String) -> Token {
-        let token = Token { token_type, value };
-        self.next();
-        token
-    }
 
     fn parse_number(&mut self) -> Token {
         let mut num = String::from("");
@@ -41,9 +36,11 @@ impl Lexer {
                 break;
             }
         }
-        Token {
-            token_type: TokenType::Number,
-            value: num,
+
+        if dots != 0 {
+            Token::Double(num.parse::<f64>().unwrap())
+        } else {
+            Token::Int(num.parse::<i64>().unwrap())
         }
     }
 
@@ -54,25 +51,44 @@ impl Lexer {
             let c = self.curr();
             match c {
                 ' ' | '\n' | '\t' | '\r' => self.next(),
-                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '.' => {
-                    tokens.push(self.parse_number())
+                '0'..='9' | '.' => tokens.push(self.parse_number()),
+                '+' => {
+                    tokens.push(Token::Plus);
+                    self.next()
                 }
-                '+' => tokens.push(self.add_token(TokenType::Plus, String::from(c))),
-                '-' => tokens.push(self.add_token(TokenType::Minus, String::from(c))),
-                '*' => tokens.push(self.add_token(TokenType::Multiply, String::from(c))),
-                '/' => tokens.push(self.add_token(TokenType::Divide, String::from(c))),
-                '^' => tokens.push(self.add_token(TokenType::Power, String::from(c))),
-                '%' => tokens.push(self.add_token(TokenType::Modulus, String::from(c))),
-                '(' => tokens.push(self.add_token(TokenType::LParam, String::from(c))),
-                ')' => tokens.push(self.add_token(TokenType::RParam, String::from(c))),
+                '-' => {
+                    tokens.push(Token::Minus);
+                    self.next()
+                }
+                '*' => {
+                    tokens.push(Token::Multiply);
+                    self.next()
+                }
+                '/' => {
+                    tokens.push(Token::Divide);
+                    self.next()
+                }
+                '^' => {
+                    tokens.push(Token::Power);
+                    self.next()
+                }
+                '%' => {
+                    tokens.push(Token::Modulus);
+                    self.next()
+                }
+                '(' => {
+                    tokens.push(Token::LParam);
+                    self.next()
+                }
+                ')' => {
+                    tokens.push(Token::RParam);
+                    self.next()
+                }
                 _ => panic!("Invalid Token {}", c),
             }
         }
         // Add EOF
-        tokens.push(Token {
-            token_type: TokenType::EOF,
-            value: String::from(""),
-        });
+        tokens.push(Token::EOF);
         // Return tokens
         tokens
     }

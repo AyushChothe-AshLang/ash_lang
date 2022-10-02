@@ -1,13 +1,6 @@
-// Token
-#[derive(Debug)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub value: String,
-}
-
 // TokenType
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenType {
+pub enum Token {
     Plus,
     Minus,
     Multiply,
@@ -16,6 +9,7 @@ pub enum TokenType {
     Modulus,
     LParam,
     RParam,
-    Number,
+    Int(i64),
+    Double(f64),
     EOF,
 }

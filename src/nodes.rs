@@ -1,98 +1,64 @@
-use super::values::*;
+use std::fmt::Debug;
 
 // Node
-pub trait Node: std::fmt::Debug {
-    fn get_type(&self) -> NodeType;
-    fn get_value(&self) -> Box<dyn Value<f64>>;
-}
-
-//NodeType
-pub enum NodeType {
-    Number,
-    BinaryOpNode,
-}
-
-// NumberNode
 #[derive(Debug)]
-pub struct NumberNode {
+pub enum Node {
+    Int(IntNode),
+    Double(DoubleNode),
+    BinaryOp(BinaryOpNode),
+}
+
+// IntNode
+#[derive(Debug)]
+pub struct IntNode {
+    pub value: i64,
+}
+
+// DoubleNode
+#[derive(Debug)]
+pub struct DoubleNode {
     pub value: f64,
 }
-impl Node for NumberNode {
-    fn get_type(&self) -> NodeType {
-        NodeType::Number
-    }
 
-    fn get_value(&self) -> Box<dyn Value<f64>> {
-        Box::new(NumberValue::new(self.value))
-    }
+// Operation Enum
+#[derive(Debug)]
+pub enum Operation {
+    Addition,
+    Subtraction,
+    Multiply,
+    Divide,
+    Power,
+    Modulus,
 }
 
 // BinaryOpNode
 #[derive(Debug)]
 pub struct BinaryOpNode {
-    pub left: Box<dyn Node>,
-    pub right: Box<dyn Node>,
-    pub op: String,
+    pub left: Box<Node>,
+    pub right: Box<Node>,
+    pub op: Operation,
 }
 
 impl BinaryOpNode {
-    fn new(left: Box<dyn Node>, right: Box<dyn Node>, op: String) -> BinaryOpNode {
+    fn new(left: Box<Node>, right: Box<Node>, op: Operation) -> BinaryOpNode {
         BinaryOpNode { left, right, op }
     }
-    pub fn plus(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("+"))
+    pub fn plus(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Addition)
     }
-    pub fn minus(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("-"))
+    pub fn minus(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Subtraction)
     }
-    pub fn multiply(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("*"))
+    pub fn multiply(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Multiply)
     }
-    pub fn divide(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("/"))
+    pub fn divide(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Divide)
     }
-    pub fn power(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("^"))
+    pub fn power(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Power)
     }
-    pub fn modulus(left: Box<dyn Node>, right: Box<dyn Node>) -> BinaryOpNode {
-        BinaryOpNode::new(left, right, String::from("%"))
-    }
-}
-impl Node for BinaryOpNode {
-    fn get_type(&self) -> NodeType {
-        NodeType::BinaryOpNode
-    }
-    fn get_value(&self) -> Box<dyn Value<f64>> {
-        let op = self.op.clone();
-        if op == "+" {
-            Box::new(NumberValue::new(
-                self.left.get_value().get_literal() + self.right.get_value().get_literal(),
-            ))
-        } else if op == "-" {
-            Box::new(NumberValue::new(
-                self.left.get_value().get_literal() - self.right.get_value().get_literal(),
-            ))
-        } else if op == "*" {
-            Box::new(NumberValue::new(
-                self.left.get_value().get_literal() * self.right.get_value().get_literal(),
-            ))
-        } else if op == "/" {
-            Box::new(NumberValue::new(
-                self.left.get_value().get_literal() / self.right.get_value().get_literal(),
-            ))
-        } else if op == "^" {
-            Box::new(NumberValue::new(
-                self.left
-                    .get_value()
-                    .get_literal()
-                    .powf(self.right.get_value().get_literal()),
-            ))
-        } else if op == "%" {
-            Box::new(NumberValue::new(
-                self.left.get_value().get_literal() % self.right.get_value().get_literal(),
-            ))
-        } else {
-            panic!("Invalid Binary Operator")
-        }
+    pub fn modulus(left: Box<Node>, right: Box<Node>) -> BinaryOpNode {
+        BinaryOpNode::new(left, right, Operation::Modulus)
     }
 }

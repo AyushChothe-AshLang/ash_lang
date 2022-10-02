@@ -1,5 +1,5 @@
 use super::nodes::*;
-use super::tokens::{Token, TokenType};
+use super::tokens::Token;
 // Lexer
 pub struct Parser {
     tokens: Vec<Token>,
@@ -16,15 +16,15 @@ impl Parser {
     }
 
     fn next(&mut self) -> () {
-        if self.pos < self.tokens.len() && self.curr().token_type != TokenType::EOF {
+        if self.pos < self.tokens.len() && self.curr() != &Token::EOF {
             self.pos += 1;
         } else {
             panic!("Reached EOF")
         }
     }
 
-    fn eat(&mut self, token_type: TokenType) -> () {
-        let tkn = self.curr().token_type.clone();
+    fn eat(&mut self, token_type: &Token) -> () {
+        let tkn = self.curr();
         if tkn == token_type {
             self.next();
         } else {
@@ -32,72 +32,72 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Box<dyn Node> {
+    pub fn parse(&mut self) -> Box<Node> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Box<dyn Node> {
+    fn expression(&mut self) -> Box<Node> {
         let mut res = self.factor();
 
-        while self.pos < self.tokens.len()
-            && [TokenType::Plus, TokenType::Minus].contains(&self.curr().token_type)
-        {
-            if self.curr().token_type == TokenType::Plus {
+        while self.pos < self.tokens.len() && [Token::Plus, Token::Minus].contains(&self.curr()) {
+            if self.curr() == &Token::Plus {
                 self.next();
-                res = Box::new(BinaryOpNode::plus(res, self.factor()));
-            } else if self.curr().token_type == TokenType::Minus {
+                res = Box::new(Node::BinaryOp(BinaryOpNode::plus(res, self.factor())));
+            } else if self.curr() == &Token::Minus {
                 self.next();
-                res = Box::new(BinaryOpNode::minus(res, self.factor()));
+                res = Box::new(Node::BinaryOp(BinaryOpNode::minus(res, self.factor())));
             }
         }
 
         res
     }
-    fn factor(&mut self) -> Box<dyn Node> {
+    fn factor(&mut self) -> Box<Node> {
         let mut res = self.power();
 
         while self.pos < self.tokens.len()
-            && [TokenType::Multiply, TokenType::Divide, TokenType::Modulus]
-                .contains(&self.curr().token_type)
+            && [&Token::Multiply, &Token::Divide, &Token::Modulus].contains(&self.curr())
         {
-            if self.curr().token_type == TokenType::Multiply {
+            if self.curr() == &Token::Multiply {
                 self.next();
-                res = Box::new(BinaryOpNode::multiply(res, self.power()));
-            } else if self.curr().token_type == TokenType::Divide {
+                res = Box::new(Node::BinaryOp(BinaryOpNode::multiply(res, self.power())));
+            } else if self.curr() == &Token::Divide {
                 self.next();
-                res = Box::new(BinaryOpNode::divide(res, self.power()));
-            } else if self.curr().token_type == TokenType::Modulus {
+                res = Box::new(Node::BinaryOp(BinaryOpNode::divide(res, self.power())));
+            } else if self.curr() == &Token::Modulus {
                 self.next();
-                res = Box::new(BinaryOpNode::modulus(res, self.power()));
+                res = Box::new(Node::BinaryOp(BinaryOpNode::modulus(res, self.power())));
             }
         }
 
         res
     }
-    fn power(&mut self) -> Box<dyn Node> {
+    fn power(&mut self) -> Box<Node> {
         let mut res = self.atom();
 
-        while self.pos < self.tokens.len() && [TokenType::Power].contains(&self.curr().token_type) {
-            if self.curr().token_type == TokenType::Power {
+        while self.pos < self.tokens.len() && [&Token::Power].contains(&self.curr()) {
+            if self.curr() == &Token::Power {
                 self.next();
-                res = Box::new(BinaryOpNode::power(res, self.atom()));
+                res = Box::new(Node::BinaryOp(BinaryOpNode::power(res, self.atom())));
             }
         }
 
         res
     }
-    fn atom(&mut self) -> Box<dyn Node> {
-        match self.curr().token_type {
-            TokenType::LParam => {
-                self.eat(TokenType::LParam);
+    fn atom(&mut self) -> Box<Node> {
+        match self.curr() {
+            Token::LParam => {
+                self.eat(&Token::LParam);
                 let res = self.expression();
-                self.eat(TokenType::RParam);
+                self.eat(&Token::RParam);
                 res
             }
-            TokenType::Number => {
-                let res = Box::new(NumberNode {
-                    value: self.curr().value.parse::<f64>().unwrap(),
-                });
+            Token::Int(num) => {
+                let res = Box::new(Node::Int(IntNode { value: num.clone() }));
+                self.next();
+                res
+            }
+            Token::Double(num) => {
+                let res = Box::new(Node::Double(DoubleNode { value: num.clone() }));
                 self.next();
                 res
             }
