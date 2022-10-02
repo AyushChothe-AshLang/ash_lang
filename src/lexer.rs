@@ -21,6 +21,13 @@ impl Lexer {
             panic!("Reached EOF")
         }
     }
+    fn lookahed(&self) -> char {
+        if (self.pos + 1) < self.code.len() {
+            self.code.chars().nth(self.pos + 1).unwrap()
+        } else {
+            panic!("Reached EOF")
+        }
+    }
 
     fn parse_number(&mut self) -> Token {
         let mut num = String::from("");
@@ -75,6 +82,46 @@ impl Lexer {
                 '%' => {
                     tokens.push(Token::Modulus);
                     self.next()
+                }
+                '=' => {
+                    if self.lookahed() == '=' {
+                        self.next();
+                        tokens.push(Token::DoubleEquals);
+                        self.next();
+                    } else {
+                        tokens.push(Token::Equals);
+                        self.next()
+                    }
+                }
+                '!' => {
+                    if self.lookahed() == '=' {
+                        self.next();
+                        tokens.push(Token::NotEquals);
+                        self.next();
+                    } else {
+                        tokens.push(Token::Not);
+                        self.next()
+                    }
+                }
+                '<' => {
+                    if self.lookahed() == '=' {
+                        self.next();
+                        tokens.push(Token::LessThanEq);
+                        self.next();
+                    } else {
+                        tokens.push(Token::LessThan);
+                        self.next()
+                    }
+                }
+                '>' => {
+                    if self.lookahed() == '=' {
+                        self.next();
+                        tokens.push(Token::GreaterThanEq);
+                        self.next();
+                    } else {
+                        tokens.push(Token::GreaterThan);
+                        self.next()
+                    }
                 }
                 '(' => {
                     tokens.push(Token::LParam);

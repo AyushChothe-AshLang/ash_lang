@@ -1,5 +1,5 @@
 // Value
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Value {
     IntValue(i64),
     DoubleValue(f64),

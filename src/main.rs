@@ -10,7 +10,7 @@ use lexer::Lexer;
 use parser::Parser;
 
 fn main() {
-    let code = String::from("(((2^2)*(3+2)*2)/2)^2");
+    let code = String::from("3.14>3.12");
 
     let mut lexer = Lexer::new(code);
     let tokens = lexer.tokenize();

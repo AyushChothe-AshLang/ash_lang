@@ -20,7 +20,8 @@ impl Interpreter {
         match node {
             Node::Int(int_node) => self.walk_int_node(int_node),
             Node::Double(double_node) => self.walk_double_node(double_node),
-            Node::BinaryOp(bin_op_node) => self.walk_binary_op_node(bin_op_node),
+            Node::BinaryOpNumber(bin_op_node) => self.walk_binary_op_number_node(bin_op_node),
+            Node::BinaryOpBoolean(bin_op_node) => self.walk_binary_op_boolean_node(bin_op_node),
         }
     }
 
@@ -31,17 +32,32 @@ impl Interpreter {
     fn walk_double_node(&self, node: &DoubleNode) -> Value {
         Value::DoubleValue(node.value)
     }
-    fn walk_binary_op_node(&self, node: &BinaryOpNode) -> Value {
+
+    fn walk_binary_op_boolean_node(&self, node: &BinaryOpBooleanNode) -> Value {
         let left = self.walk(&node.left);
         let right = self.walk(&node.right);
 
         match node.op {
-            Operation::Addition => self.perform_op(left, right, |res, x| res + x),
-            Operation::Subtraction => self.perform_op(left, right, |res, x| res - x),
-            Operation::Multiply => self.perform_op(left, right, |res, x| res * x),
-            Operation::Divide => self.perform_op(left, right, |res, x| res / x),
-            Operation::Power => self.perform_op(left, right, |res, x| res.powf(x)),
-            Operation::Modulus => self.perform_op(left, right, |res, x| res % x),
+            Comparison::DoubleEquals => Value::BooleanValue(left == right),
+            Comparison::NotEquals => Value::BooleanValue(left != right),
+            Comparison::LessThan => Value::BooleanValue(left < right),
+            Comparison::LessThanEq => Value::BooleanValue(left <= right),
+            Comparison::GreaterThan => Value::BooleanValue(left > right),
+            Comparison::GreaterThanEq => Value::BooleanValue(left >= right),
+        }
+    }
+
+    fn walk_binary_op_number_node(&self, node: &BinaryOpNumberNode) -> Value {
+        let left = self.walk(&node.left);
+        let right = self.walk(&node.right);
+
+        match node.op {
+            Arithmetic::Addition => self.perform_op(left, right, |res, x| res + x),
+            Arithmetic::Subtraction => self.perform_op(left, right, |res, x| res - x),
+            Arithmetic::Multiply => self.perform_op(left, right, |res, x| res * x),
+            Arithmetic::Divide => self.perform_op(left, right, |res, x| res / x),
+            Arithmetic::Power => self.perform_op(left, right, |res, x| res.powf(x)),
+            Arithmetic::Modulus => self.perform_op(left, right, |res, x| res % x),
         }
     }
 
@@ -70,7 +86,7 @@ impl Interpreter {
             }
             _ => panic!("Invalid Type"),
         };
-        if is_left_int && is_right_int {
+        if is_left_int && is_right_int && res.fract() == 0.0 {
             Value::IntValue(res as i64)
         } else {
             Value::DoubleValue(res)

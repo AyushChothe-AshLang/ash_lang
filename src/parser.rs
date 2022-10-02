@@ -33,7 +33,56 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Box<Node> {
-        self.expression()
+        let res = self.equality();
+        if self.curr() != &Token::EOF {
+            panic!("Invalid Syntax");
+        }
+        res
+    }
+
+    fn equality(&mut self) -> Box<Node> {
+        let mut res = self.comparison();
+
+        if [Token::DoubleEquals, Token::NotEquals].contains(&self.curr()) {
+            if self.curr() == &Token::DoubleEquals {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::deq(res, self.comparison()));
+            } else if self.curr() == &Token::NotEquals {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::neq(res, self.comparison()));
+            }
+        }
+
+        res
+    }
+
+    fn comparison(&mut self) -> Box<Node> {
+        let mut res = self.expression();
+
+        if [
+            Token::LessThan,
+            Token::LessThanEq,
+            Token::GreaterThan,
+            Token::GreaterThanEq,
+        ]
+        .contains(&self.curr())
+        {
+            if self.curr() == &Token::LessThan {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::lt(res, self.expression()));
+            } else if self.curr() == &Token::LessThanEq {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::lte(res, self.expression()));
+            } else if self.curr() == &Token::GreaterThan {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::gt(res, self.expression()));
+            } else if self.curr() == &Token::GreaterThanEq {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::gte(res, self.expression()));
+            }
+        }
+
+        res
     }
 
     fn expression(&mut self) -> Box<Node> {
@@ -42,10 +91,10 @@ impl Parser {
         while self.pos < self.tokens.len() && [Token::Plus, Token::Minus].contains(&self.curr()) {
             if self.curr() == &Token::Plus {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::plus(res, self.factor())));
+                res = Box::new(BinaryOpNumberNode::plus(res, self.factor()));
             } else if self.curr() == &Token::Minus {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::minus(res, self.factor())));
+                res = Box::new(BinaryOpNumberNode::minus(res, self.factor()));
             }
         }
 
@@ -59,13 +108,13 @@ impl Parser {
         {
             if self.curr() == &Token::Multiply {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::multiply(res, self.power())));
+                res = Box::new(BinaryOpNumberNode::multiply(res, self.power()));
             } else if self.curr() == &Token::Divide {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::divide(res, self.power())));
+                res = Box::new(BinaryOpNumberNode::divide(res, self.power()));
             } else if self.curr() == &Token::Modulus {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::modulus(res, self.power())));
+                res = Box::new(BinaryOpNumberNode::modulus(res, self.power()));
             }
         }
 
@@ -77,7 +126,7 @@ impl Parser {
         while self.pos < self.tokens.len() && [&Token::Power].contains(&self.curr()) {
             if self.curr() == &Token::Power {
                 self.next();
-                res = Box::new(Node::BinaryOp(BinaryOpNode::power(res, self.atom())));
+                res = Box::new(BinaryOpNumberNode::power(res, self.atom()));
             }
         }
 
