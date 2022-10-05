@@ -1,13 +1,22 @@
+use crate::utils::utils::is_keyword;
+
 use super::tokens::Token;
 // Lexer
 pub struct Lexer {
     code: String,
     pos: usize,
+    line: i32,
+    col: i32,
 }
 
 impl Lexer {
     pub fn new(code: String) -> Self {
-        Lexer { code, pos: 0 }
+        Lexer {
+            code,
+            pos: 0,
+            line: 1,
+            col: 1,
+        }
     }
 
     fn curr(&self) -> char {
@@ -17,6 +26,7 @@ impl Lexer {
     fn next(&mut self) -> () {
         if self.pos < self.code.len() {
             self.pos += 1;
+            self.col += 1;
         } else {
             panic!("Reached EOF")
         }
@@ -51,14 +61,37 @@ impl Lexer {
         }
     }
 
+    fn parse_identifier(&mut self) -> Token {
+        let mut id = String::from("");
+        while self.pos < self.code.len()
+            && (('a'..='z').contains(&self.curr().to_ascii_lowercase())
+                || ('0'..='9').contains(&self.curr().to_ascii_lowercase()))
+        {
+            id.push(self.curr());
+            self.next();
+        }
+        if let Some(keyord) = is_keyword(id.as_str()) {
+            keyord
+        } else {
+            Token::Identifier(id)
+        }
+    }
+
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = vec![];
 
         while self.pos < self.code.len() {
-            let c = self.curr();
+            let c = self.curr().to_ascii_lowercase();
             match c {
-                ' ' | '\n' | '\t' | '\r' => self.next(),
+                ' ' | '\n' | '\t' | '\r' => {
+                    if c == '\n' {
+                        self.line += 1;
+                        self.col = 0;
+                    }
+                    self.next()
+                }
                 '0'..='9' | '.' => tokens.push(self.parse_number()),
+                'a'..='z' => tokens.push(self.parse_identifier()),
                 '+' => {
                     tokens.push(Token::Plus);
                     self.next()
@@ -124,11 +157,35 @@ impl Lexer {
                     }
                 }
                 '(' => {
-                    tokens.push(Token::LParam);
+                    tokens.push(Token::LParan);
                     self.next()
                 }
                 ')' => {
-                    tokens.push(Token::RParam);
+                    tokens.push(Token::RParan);
+                    self.next()
+                }
+                '{' => {
+                    tokens.push(Token::LBrace);
+                    self.next()
+                }
+                '}' => {
+                    tokens.push(Token::RBrace);
+                    self.next()
+                }
+                '[' => {
+                    tokens.push(Token::LSquare);
+                    self.next()
+                }
+                ']' => {
+                    tokens.push(Token::RSquare);
+                    self.next()
+                }
+                ',' => {
+                    tokens.push(Token::Comma);
+                    self.next()
+                }
+                ';' => {
+                    tokens.push(Token::Semicolon);
                     self.next()
                 }
                 _ => panic!("Invalid Token {}", c),
