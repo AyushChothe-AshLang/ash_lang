@@ -8,23 +8,13 @@ pub enum Value {
     BooleanValue(bool),
     None,
 }
-impl Value {
-    pub fn val(&self) -> String {
-        match self {
-            Value::IntValue(i) => format!("{i}"),
-            Value::DoubleValue(d) => format!("{d}"),
-            Value::BooleanValue(b) => format!("{b}"),
-            Value::None => format!("None"),
-        }
-    }
-}
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::IntValue(i) => write!(f, "{i}"),
-            Value::DoubleValue(d) => write!(f, "{d}"),
-            Value::BooleanValue(b) => write!(f, "{b}"),
+            Value::IntValue(i) => i.fmt(f),
+            Value::DoubleValue(d) => d.fmt(f),
+            Value::BooleanValue(b) => b.fmt(f),
             Value::None => write!(f, "None"),
         }
     }

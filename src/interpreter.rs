@@ -10,7 +10,6 @@ type BuiltInFn = fn(Vec<Value>) -> Value;
 
 pub struct Interpreter {
     ast: Box<Node>,
-    global_scope: ScopePtr,
     builtin: HashMap<String, BuiltInFn>,
 }
 
@@ -20,30 +19,29 @@ impl Interpreter {
             (String::from("print"), ash_print as BuiltInFn),
             (String::from("println"), ash_println as BuiltInFn),
         ]);
-        Interpreter {
-            ast,
-            builtin,
-            global_scope: Scope::from(HashMap::new(), HashMap::new()),
-        }
+        Interpreter { ast, builtin }
     }
 
     pub fn eval(&mut self) -> Value {
-        self.walk(&mut self.ast.clone())
+        let mut global_scope = Scope::from(HashMap::new(), HashMap::new());
+        self.walk(&mut self.ast.clone(), &mut global_scope)
     }
 
-    fn walk(&mut self, node: &mut Node) -> Value {
+    fn walk(&mut self, node: &mut Node, scope: &mut ScopePtr) -> Value {
         match node {
             Node::Int(_node) => self.walk_int_node(_node),
             Node::Double(_node) => self.walk_double_node(_node),
-            Node::BinaryOpNumber(_node) => self.walk_binary_op_number_node(_node),
-            Node::BinaryOpBoolean(_node) => self.walk_binary_op_boolean_node(_node),
-            Node::UnaryNumber(_node) => self.walk_unary_number_node(_node),
-            Node::UnaryBoolean(_node) => self.walk_unary_boolean_node(_node),
-            Node::Assignment(_node) => self.walk_assignment_node(_node),
-            Node::Identifier(_node) => self.walk_identifier_node(_node),
-            Node::BlockStatement(_node) => self.walk_block_statement_node(_node),
-            Node::FunctionCall(_node) => self.walk_function_call_node(_node),
-            Node::FunctionDeclaration(_node) => self.walk_function_declaration_node(_node),
+            Node::BinaryOpNumber(_node) => self.walk_binary_op_number_node(_node, scope),
+            Node::BinaryOpBoolean(_node) => self.walk_binary_op_boolean_node(_node, scope),
+            Node::UnaryNumber(_node) => self.walk_unary_number_node(_node, scope),
+            Node::UnaryBoolean(_node) => self.walk_unary_boolean_node(_node, scope),
+            Node::Assignment(_node) => self.walk_assignment_node(_node, scope),
+            Node::Identifier(_node) => self.walk_identifier_node(_node, scope),
+            Node::BlockStatement(_node) => self.walk_block_statement_node(_node, scope),
+            Node::FunctionCall(_node) => self.walk_function_call_node(_node, scope),
+            Node::FunctionDeclaration(_node) => self.walk_function_declaration_node(_node, scope),
+            Node::MultiDeclaration(_node) => self.walk_multi_declaration_node(_node, scope),
+            Node::Declaration(_node) => self.walk_declaration_node(_node, scope),
         }
     }
 
@@ -55,22 +53,30 @@ impl Interpreter {
         Value::DoubleValue(node.value)
     }
 
-    fn walk_identifier_node(&mut self, node: &IdentifierNode) -> Value {
+    fn walk_identifier_node(&mut self, node: &IdentifierNode, scope: &mut ScopePtr) -> Value {
         let key = node.value.clone();
-        self.global_scope.borrow().get_symbol(key)
+        scope.borrow().get_symbol(key)
     }
 
-    fn walk_block_statement_node(&mut self, node: &BlockStatementNode) -> Value {
-        // let local = Scope::new(self.global_scope.clone());
+    fn walk_block_statement_node(
+        &mut self,
+        node: &BlockStatementNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let mut local = Scope::new(scope.clone());
         let mut res = Value::None;
         for mut stmt in node.value.clone() {
-            res = self.walk(&mut *stmt);
+            res = self.walk(&mut *stmt, &mut local);
         }
         res
     }
 
-    fn walk_unary_number_node(&mut self, node: &mut UnaryNumberNode) -> Value {
-        let res = self.walk(&mut node.value);
+    fn walk_unary_number_node(
+        &mut self,
+        node: &mut UnaryNumberNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let res = self.walk(&mut node.value, scope);
         match res {
             Value::IntValue(i) => match node.op {
                 UnaryArithmetic::Plus => Value::IntValue(i),
@@ -84,8 +90,12 @@ impl Interpreter {
         }
     }
 
-    fn walk_unary_boolean_node(&mut self, node: &mut UnaryBooleanNode) -> Value {
-        let res = self.walk(&mut node.value);
+    fn walk_unary_boolean_node(
+        &mut self,
+        node: &mut UnaryBooleanNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let res = self.walk(&mut node.value, scope);
         match res {
             Value::BooleanValue(b) => match node.op {
                 UnaryOperator::Not => Value::BooleanValue(!b),
@@ -94,9 +104,13 @@ impl Interpreter {
         }
     }
 
-    fn walk_binary_op_boolean_node(&mut self, node: &mut BinaryOpBooleanNode) -> Value {
-        let left = self.walk(&mut node.left);
-        let right = self.walk(&mut node.right);
+    fn walk_binary_op_boolean_node(
+        &mut self,
+        node: &mut BinaryOpBooleanNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let left = self.walk(&mut node.left, scope);
+        let right = self.walk(&mut node.right, scope);
 
         match node.op {
             Comparison::DoubleEquals => Value::BooleanValue(left == right),
@@ -108,9 +122,13 @@ impl Interpreter {
         }
     }
 
-    fn walk_binary_op_number_node(&mut self, node: &mut BinaryOpNumberNode) -> Value {
-        let left = self.walk(&mut node.left);
-        let right = self.walk(&mut node.right);
+    fn walk_binary_op_number_node(
+        &mut self,
+        node: &mut BinaryOpNumberNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let left = self.walk(&mut node.left, scope);
+        let right = self.walk(&mut node.right, scope);
         match node.op {
             Arithmetic::Addition => self.perform_op(left, right, |res, x| res + x),
             Arithmetic::Subtraction => self.perform_op(left, right, |res, x| res - x),
@@ -153,39 +171,73 @@ impl Interpreter {
         }
     }
 
-    fn walk_assignment_node(&mut self, node: &mut AssignmentNode) -> Value {
+    fn walk_assignment_node(&mut self, node: &mut AssignmentNode, scope: &mut ScopePtr) -> Value {
         let id = node.id.clone();
-        let value = self.walk(&mut node.value);
-        self.global_scope.borrow_mut().declare_symbol(id, value);
+        let value = self.walk(&mut node.value, scope);
+        scope.borrow_mut().set_symbol(id, value);
         Value::None
     }
 
-    fn walk_function_declaration_node(&mut self, node: &FunctionDeclarationNode) -> Value {
+    fn walk_multi_declaration_node(
+        &mut self,
+        node: &mut MultiDeclarationNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        for mut dec in node.declarations.clone() {
+            self.walk(&mut dec, scope);
+        }
+
+        Value::None
+    }
+    fn walk_declaration_node(&mut self, node: &mut DeclarationNode, scope: &mut ScopePtr) -> Value {
+        let id = node.id.clone();
+        let value = self.walk(&mut node.value, scope);
+        scope.borrow_mut().declare_symbol(id, value);
+        Value::None
+    }
+
+    fn walk_function_declaration_node(
+        &mut self,
+        node: &FunctionDeclarationNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
         let fn_id = node.id.clone();
-        self.global_scope
-            .borrow_mut()
-            .declare_function(fn_id, node.clone());
+        scope.borrow_mut().declare_function(fn_id, node.clone());
         Value::None
     }
 
-    fn walk_function_call_node(&mut self, node: &mut FunctionCallNode) -> Value {
+    fn walk_function_call_node(
+        &mut self,
+        node: &mut FunctionCallNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
         let id = node.id.clone();
         if let Some(_fn) = self.builtin.get(&id) {
             let mut vals = vec![];
             for mut arg in node.args.clone() {
-                vals.push(self.walk(&mut arg));
+                vals.push(self.walk(&mut arg, scope));
             }
             return self.builtin.get(&id).unwrap()(vals);
         }
 
-        // let _fn = self.global_scope.borrow().get_function(id);
-        // let mut vals = vec![];
-        // for mut arg in node.args.clone() {
-        //     vals.push(self.walk(&mut arg));
-        // }
+        let mut _fn = scope.borrow().get_function(id);
+        let mut vals = vec![];
+        for mut arg in node.args.clone() {
+            vals.push(self.walk(&mut arg, scope));
+        }
 
-        // _fn.params
+        if vals.len() != _fn.params.len() {
+            panic!("Invalid number of arguments to function")
+        }
 
-        panic!("Function not Found")
+        let mut fn_scope = Scope::new(scope.clone());
+
+        for (key, value) in _fn.params.iter().zip(vals.iter()) {
+            fn_scope
+                .borrow_mut()
+                .declare_symbol(key.clone(), value.clone());
+        }
+
+        self.walk(&mut _fn.body, &mut fn_scope)
     }
 }

@@ -1,6 +1,10 @@
+use crate::tokens::PosRange;
+
 use super::nodes::*;
 use super::tokens::Token;
-// Lexer
+use super::utils::utils::variant_eq;
+
+// Parser
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
@@ -15,15 +19,28 @@ impl Parser {
         self.tokens.iter().nth(self.pos).unwrap()
     }
 
-    fn lookahead(&mut self) -> &Token {
-        if self.pos + 1 < self.tokens.len() && self.curr() != &Token::EOF {
+    fn contains_tkn(&self, vec: Vec<&Token>, curr: &Token) -> bool {
+        for t in vec.iter() {
+            if variant_eq(*t, curr) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn lookahead(&self) -> &Token {
+        if self.pos + 1 < self.tokens.len()
+            && self.contains_tkn(vec![&Token::EOF(PosRange::empty())], self.curr())
+        {
             self.tokens.iter().nth(self.pos + 1).unwrap()
         } else {
             panic!("Reached EOF")
         }
     }
     fn next(&mut self) -> () {
-        if self.pos < self.tokens.len() && self.curr() != &Token::EOF {
+        if self.pos < self.tokens.len()
+            && self.contains_tkn(vec![&Token::EOF(PosRange::empty())], self.curr())
+        {
             self.pos += 1;
         } else {
             panic!("Reached EOF")
@@ -47,28 +64,52 @@ impl Parser {
         if self.curr() != &Token::EOF {
             panic!("Invalid Syntax");
         }
+        // Invoke Main
+        res.push(Box::new(FunctionCallNode::new(
+            String::from("main"),
+            Vec::new(),
+        )));
+
         Box::new(BlockStatementNode::new(res))
     }
 
     fn primary_statements(&mut self) -> Box<Node> {
-        if let Token::Identifier(_) = self.curr() {
-            if self.lookahead() == &Token::Equals {
-                return self.assignment();
-            } else if self.lookahead() == &Token::LParan {
-                let res = self.function_call_statement();
+        match self.curr() {
+            Token::Identifier(_) => {
+                // Assignment or FunctionCall
+                match self.lookahead() {
+                    Token::Equals => {
+                        return self.assignment();
+                    }
+                    Token::LParan => {
+                        let res = self.function_call_statement();
+                        self.eat(&Token::Semicolon);
+                        return res;
+                    }
+                    _ => {
+                        let res = self.equality();
+                        self.eat(&Token::Semicolon);
+                        return res;
+                    }
+                }
+            }
+            Token::FnK => {
+                // Function Declaration
+                return self.function_declaration_statement();
+            }
+            Token::LetK => {
+                // Variable Declaration
+                return self.multi_declaration_node();
+            }
+            Token::LBrace => {
+                return self.block_statement();
+            }
+            _ => {
+                let res = self.equality();
                 self.eat(&Token::Semicolon);
                 return res;
             }
         }
-
-        if self.curr() == &Token::FnK {
-            return self.function_declaration_statement();
-        }
-
-        let res = self.equality();
-        self.eat(&Token::Semicolon);
-
-        return res;
     }
 
     fn function_declaration_statement(&mut self) -> Box<Node> {
@@ -107,6 +148,29 @@ impl Parser {
         }
         self.eat(&Token::RBrace);
         return Box::new(BlockStatementNode::new(value));
+    }
+
+    fn multi_declaration_node(&mut self) -> Box<Node> {
+        self.eat(&Token::LetK);
+
+        let mut declarations = Vec::new();
+
+        let id = self.identifier();
+        self.eat(&Token::Equals);
+        let value = self.equality();
+
+        declarations.push(Box::new(DeclarationNode::new(id, value)));
+
+        while self.pos < self.tokens.len() && self.curr() == &Token::Comma {
+            self.eat(&Token::Comma);
+            let id = self.identifier();
+            self.eat(&Token::Equals);
+            let value = self.equality();
+            declarations.push(Box::new(DeclarationNode::new(id, value)));
+        }
+
+        self.eat(&Token::Semicolon);
+        Box::new(MultiDeclarationNode::new(declarations))
     }
 
     fn assignment(&mut self) -> Box<Node> {
@@ -228,7 +292,7 @@ impl Parser {
     fn power(&mut self) -> Box<Node> {
         let mut res = self.atom();
 
-        while self.pos < self.tokens.len() && [&Token::Power].contains(&self.curr()) {
+        while self.pos < self.tokens.len() && [&Token::Power()].contains(&self.curr()) {
             if self.curr() == &Token::Power {
                 self.next();
                 res = Box::new(BinaryOpNumberNode::power(res, self.atom()));
@@ -246,7 +310,12 @@ impl Parser {
                 res
             }
             Token::Identifier(id) => {
-                let res = Box::new(Node::Identifier(IdentifierNode { value: id.clone() }));
+                let res;
+                if self.lookahead() == &Token::LParan {
+                    res = self.function_call_statement();
+                } else {
+                    res = Box::new(Node::Identifier(IdentifierNode { value: id.clone() }));
+                }
                 self.next();
                 res
             }
@@ -260,7 +329,7 @@ impl Parser {
                 let res = Box::new(UnaryNumberNode::minus(self.atom()));
                 res
             }
-            Token::Int(num) => {
+            Token::Int(num, _) => {
                 let res = Box::new(Node::Int(IntNode { value: num.clone() }));
                 self.next();
                 res

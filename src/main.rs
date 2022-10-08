@@ -23,7 +23,7 @@ fn main() {
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    print!("{:?}", ast);
+    // print!("{:?}", ast);
 
     let mut interpreter = Interpreter::new(ast);
 

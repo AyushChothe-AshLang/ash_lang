@@ -11,6 +11,8 @@ pub enum Node {
     BinaryOpNumber(BinaryOpNumberNode),
     BinaryOpBoolean(BinaryOpBooleanNode),
     Assignment(AssignmentNode),
+    MultiDeclaration(MultiDeclarationNode),
+    Declaration(DeclarationNode),
     BlockStatement(BlockStatementNode),
     FunctionCall(FunctionCallNode),
     FunctionDeclaration(FunctionDeclarationNode),
@@ -210,5 +212,27 @@ pub struct FunctionDeclarationNode {
 impl FunctionDeclarationNode {
     pub fn new(id: String, params: Vec<String>, body: Box<Node>) -> Node {
         Node::FunctionDeclaration(FunctionDeclarationNode { id, params, body })
+    }
+}
+
+// MultiDeclarationNode
+#[derive(Debug, Clone)]
+pub struct MultiDeclarationNode {
+    pub declarations: Vec<Box<Node>>,
+}
+impl MultiDeclarationNode {
+    pub fn new(declarations: Vec<Box<Node>>) -> Node {
+        Node::MultiDeclaration(MultiDeclarationNode { declarations })
+    }
+}
+// DeclarationNode
+#[derive(Debug, Clone)]
+pub struct DeclarationNode {
+    pub id: String,
+    pub value: Box<Node>,
+}
+impl DeclarationNode {
+    pub fn new(id: String, value: Box<Node>) -> Node {
+        Node::Declaration(DeclarationNode { id, value })
     }
 }

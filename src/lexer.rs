@@ -1,12 +1,15 @@
-use crate::utils::utils::is_keyword;
+use crate::{
+    tokens::{PosRange, Position},
+    utils::utils::is_keyword,
+};
 
 use super::tokens::Token;
 // Lexer
 pub struct Lexer {
     code: String,
     pos: usize,
-    line: i32,
-    col: i32,
+    line: i64,
+    col: i64,
 }
 
 impl Lexer {
@@ -21,6 +24,10 @@ impl Lexer {
 
     fn curr(&self) -> char {
         self.code.chars().nth(self.pos).unwrap()
+    }
+
+    fn get_pos(&self) -> Position {
+        Position::new(self.line, self.col)
     }
 
     fn next(&mut self) -> () {
@@ -57,12 +64,16 @@ impl Lexer {
         if dots != 0 {
             Token::Double(num.parse::<f64>().unwrap())
         } else {
-            Token::Int(num.parse::<i64>().unwrap())
+            Token::Int(
+                num.parse::<i64>().unwrap(),
+                PosRange::new(self.get_pos(), Some(self.get_pos())),
+            )
         }
     }
 
     fn parse_identifier(&mut self) -> Token {
         let mut id = String::from("");
+        let from = self.get_pos();
         while self.pos < self.code.len()
             && (('a'..='z').contains(&self.curr().to_ascii_lowercase())
                 || ('0'..='9').contains(&self.curr().to_ascii_lowercase()))
@@ -70,7 +81,8 @@ impl Lexer {
             id.push(self.curr());
             self.next();
         }
-        if let Some(keyord) = is_keyword(id.as_str()) {
+        let to = self.get_pos();
+        if let Some(keyord) = is_keyword(id.as_str(), PosRange::new(from, Some(to))) {
             keyord
         } else {
             Token::Identifier(id)
@@ -93,106 +105,117 @@ impl Lexer {
                 '0'..='9' | '.' => tokens.push(self.parse_number()),
                 'a'..='z' => tokens.push(self.parse_identifier()),
                 '+' => {
-                    tokens.push(Token::Plus);
+                    tokens.push(Token::Plus(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '-' => {
-                    tokens.push(Token::Minus);
+                    tokens.push(Token::Minus(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '*' => {
-                    tokens.push(Token::Multiply);
+                    tokens.push(Token::Multiply(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '/' => {
-                    tokens.push(Token::Divide);
+                    tokens.push(Token::Divide(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '^' => {
-                    tokens.push(Token::Power);
+                    tokens.push(Token::Power(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '%' => {
-                    tokens.push(Token::Modulus);
+                    tokens.push(Token::Modulus(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '=' => {
+                    let from = self.get_pos();
                     if self.lookahed() == '=' {
                         self.next();
-                        tokens.push(Token::DoubleEquals);
+                        let to = self.get_pos();
+                        tokens.push(Token::DoubleEquals(PosRange::new(from, Some(to))));
                         self.next();
                     } else {
-                        tokens.push(Token::Equals);
+                        tokens.push(Token::Equals(PosRange::new(from, None)));
                         self.next()
                     }
                 }
                 '!' => {
+                    let from = self.get_pos();
                     if self.lookahed() == '=' {
                         self.next();
-                        tokens.push(Token::NotEquals);
+
+                        let to = self.get_pos();
+                        tokens.push(Token::NotEquals(PosRange::new(from, Some(to))));
                         self.next();
                     } else {
-                        tokens.push(Token::Not);
+                        tokens.push(Token::Not(PosRange::new(from, None)));
                         self.next()
                     }
                 }
                 '<' => {
+                    let from = self.get_pos();
                     if self.lookahed() == '=' {
                         self.next();
-                        tokens.push(Token::LessThanEq);
+
+                        let to = self.get_pos();
+                        tokens.push(Token::LessThanEq(PosRange::new(from, Some(to))));
                         self.next();
                     } else {
-                        tokens.push(Token::LessThan);
+                        tokens.push(Token::LessThan(PosRange::new(from, None)));
                         self.next()
                     }
                 }
                 '>' => {
+                    let from = self.get_pos();
                     if self.lookahed() == '=' {
                         self.next();
-                        tokens.push(Token::GreaterThanEq);
+
+                        let to = self.get_pos();
+                        tokens.push(Token::GreaterThanEq(PosRange::new(from, Some(to))));
                         self.next();
                     } else {
-                        tokens.push(Token::GreaterThan);
+                        tokens.push(Token::GreaterThan(PosRange::new(from, None)));
                         self.next()
                     }
                 }
                 '(' => {
-                    tokens.push(Token::LParan);
+                    tokens.push(Token::LParan(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 ')' => {
-                    tokens.push(Token::RParan);
+                    tokens.push(Token::RParan(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '{' => {
-                    tokens.push(Token::LBrace);
+                    tokens.push(Token::LBrace(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '}' => {
-                    tokens.push(Token::RBrace);
+                    tokens.push(Token::RBrace(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 '[' => {
-                    tokens.push(Token::LSquare);
+                    tokens.push(Token::LSquare(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 ']' => {
-                    tokens.push(Token::RSquare);
+                    tokens.push(Token::RSquare(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 ',' => {
-                    tokens.push(Token::Comma);
+                    tokens.push(Token::Comma(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 ';' => {
-                    tokens.push(Token::Semicolon);
+                    tokens.push(Token::Semicolon(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
                 _ => panic!("Invalid Token {}", c),
             }
         }
         // Add EOF
-        tokens.push(Token::EOF);
+        tokens.push(Token::EOF(PosRange::new(self.get_pos(), None)));
         // Return tokens
         tokens
     }

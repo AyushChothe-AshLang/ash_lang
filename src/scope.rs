@@ -12,24 +12,24 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn new(parent: Rc<RefCell<Scope>>) -> Self {
-        Self {
+    pub fn new(parent: ScopePtr) -> ScopePtr {
+        Rc::new(RefCell::new(Self {
             parent: Some(parent),
             fn_table: HashMap::new(),
             var_table: HashMap::new(),
-        }
+        }))
     }
     pub fn from(
         var_table: HashMap<String, Value>,
         fn_table: HashMap<String, FunctionDeclarationNode>,
-    ) -> Rc<RefCell<Scope>> {
+    ) -> ScopePtr {
         Rc::new(RefCell::new(Scope {
             parent: None,
             fn_table,
             var_table,
         }))
     }
-    pub fn set_parent(&mut self, parent: Rc<RefCell<Scope>>) {
+    pub fn set_parent(&mut self, parent: ScopePtr) {
         self.parent = Some(parent);
     }
 
