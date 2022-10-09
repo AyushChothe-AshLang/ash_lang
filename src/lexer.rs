@@ -48,6 +48,8 @@ impl Lexer {
 
     fn parse_number(&mut self) -> Token {
         let mut num = String::from("");
+        let from = self.get_pos();
+
         let mut dots = 0;
         while self.pos < self.code.len() && "0123456789.".contains(self.curr()) {
             if self.curr() == '.' {
@@ -60,14 +62,12 @@ impl Lexer {
                 break;
             }
         }
+        let to = self.get_pos();
 
         if dots != 0 {
-            Token::Double(num.parse::<f64>().unwrap())
+            Token::Double(num.parse::<f64>().unwrap(), PosRange::new(from, Some(to)))
         } else {
-            Token::Int(
-                num.parse::<i64>().unwrap(),
-                PosRange::new(self.get_pos(), Some(self.get_pos())),
-            )
+            Token::Int(num.parse::<i64>().unwrap(), PosRange::new(from, Some(to)))
         }
     }
 
@@ -82,10 +82,11 @@ impl Lexer {
             self.next();
         }
         let to = self.get_pos();
-        if let Some(keyord) = is_keyword(id.as_str(), PosRange::new(from, Some(to))) {
+        if let Some(keyord) = is_keyword(id.as_str(), PosRange::new(from.clone(), Some(to.clone())))
+        {
             keyord
         } else {
-            Token::Identifier(id)
+            Token::Identifier(id, PosRange::new(from, Some(to)))
         }
     }
 
@@ -211,7 +212,7 @@ impl Lexer {
                     tokens.push(Token::Semicolon(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
-                _ => panic!("Invalid Token {}", c),
+                _ => panic!("Invalid Token [{}:{}]:'{}'", self.line, self.col, c),
             }
         }
         // Add EOF

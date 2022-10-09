@@ -19,7 +19,7 @@ fn main() {
         .expect("Should have been able to read the file");
     let mut lexer = Lexer::new(code);
     let tokens = lexer.tokenize();
-    println!("{:?}", tokens);
+    // println!("{:?}", tokens);
 
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();

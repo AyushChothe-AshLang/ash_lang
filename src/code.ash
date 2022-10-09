@@ -1,3 +1,3 @@
 fn main() {
-  println(10);
+  println(10, 9);
 }
