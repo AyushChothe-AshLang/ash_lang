@@ -18,6 +18,8 @@ impl Interpreter {
         let builtin: HashMap<String, BuiltInFn> = HashMap::from([
             (String::from("print"), ash_print as BuiltInFn),
             (String::from("println"), ash_println as BuiltInFn),
+            (String::from("min"), ash_min as BuiltInFn),
+            (String::from("max"), ash_max as BuiltInFn),
         ]);
         Interpreter { ast, builtin }
     }
@@ -31,6 +33,7 @@ impl Interpreter {
         match node {
             Node::Int(_node) => self.walk_int_node(_node),
             Node::Double(_node) => self.walk_double_node(_node),
+            Node::Boolean(_node) => self.walk_boolean_node(_node),
             Node::BinaryOpNumber(_node) => self.walk_binary_op_number_node(_node, scope),
             Node::BinaryOpBoolean(_node) => self.walk_binary_op_boolean_node(_node, scope),
             Node::UnaryNumber(_node) => self.walk_unary_number_node(_node, scope),
@@ -51,6 +54,10 @@ impl Interpreter {
 
     fn walk_double_node(&self, node: &DoubleNode) -> Value {
         Value::DoubleValue(node.value)
+    }
+
+    fn walk_boolean_node(&self, node: &BooleanNode) -> Value {
+        Value::BooleanValue(node.value)
     }
 
     fn walk_identifier_node(&mut self, node: &IdentifierNode, scope: &mut ScopePtr) -> Value {
@@ -119,6 +126,8 @@ impl Interpreter {
             Comparison::LessThanEq => Value::BooleanValue(left <= right),
             Comparison::GreaterThan => Value::BooleanValue(left > right),
             Comparison::GreaterThanEq => Value::BooleanValue(left >= right),
+            Comparison::And => self.and(left, right),
+            Comparison::Or => self.or(left, right),
         }
     }
 
@@ -136,6 +145,26 @@ impl Interpreter {
             Arithmetic::Divide => self.perform_op(left, right, |res, x| res / x),
             Arithmetic::Power => self.perform_op(left, right, |res, x| res.powf(x)),
             Arithmetic::Modulus => self.perform_op(left, right, |res, x| res % x),
+        }
+    }
+
+    fn and(&self, left: Value, right: Value) -> Value {
+        match left {
+            Value::BooleanValue(_left) => match right {
+                Value::BooleanValue(_right) => Value::BooleanValue(_left && _right),
+                _ => panic!("Invalid Operands"),
+            },
+            _ => panic!("Invalid Operands"),
+        }
+    }
+
+    fn or(&self, left: Value, right: Value) -> Value {
+        match left {
+            Value::BooleanValue(_left) => match right {
+                Value::BooleanValue(_right) => Value::BooleanValue(_left || _right),
+                _ => panic!("Invalid Operands"),
+            },
+            _ => panic!("Invalid Operands"),
         }
     }
 

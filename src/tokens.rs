@@ -5,6 +5,7 @@ use std::fmt::Display;
 pub enum Token {
     Int(i64, PosRange),           // 10
     Double(f64, PosRange),        // 3.14
+    Boolean(bool, PosRange),      // 3.14
     Identifier(String, PosRange), // Variables
     Plus(PosRange),               // +
     Minus(PosRange),              // -
@@ -16,19 +17,21 @@ pub enum Token {
     Equals(PosRange),             // =
     DoubleEquals(PosRange),       // ==
     NotEquals(PosRange),          // !=
-    LessThan(PosRange),           // <
-    LessThanEq(PosRange),         // <=
-    GreaterThan(PosRange),        // >
-    GreaterThanEq(PosRange),      // >=
-    LParan(PosRange),             // (
-    RParan(PosRange),             // )
-    LBrace(PosRange),             // {
-    RBrace(PosRange),             // }
-    LSquare(PosRange),            // [
-    RSquare(PosRange),            // ]
-    Comma(PosRange),              // ;
-    Semicolon(PosRange),          // ;
-    EOF(PosRange),                // End of File
+    And(PosRange),
+    Or(PosRange),
+    LessThan(PosRange),      // <
+    LessThanEq(PosRange),    // <=
+    GreaterThan(PosRange),   // >
+    GreaterThanEq(PosRange), // >=
+    LParan(PosRange),        // (
+    RParan(PosRange),        // )
+    LBrace(PosRange),        // {
+    RBrace(PosRange),        // }
+    LSquare(PosRange),       // [
+    RSquare(PosRange),       // ]
+    Comma(PosRange),         // ;
+    Semicolon(PosRange),     // ;
+    EOF(PosRange),           // End of File
     //Keywords
     WhileK(PosRange),    // while
     IfK(PosRange),       // if
@@ -78,6 +81,7 @@ impl Token {
         match self {
             Token::Int(_, _) => "Int",
             Token::Double(_, _) => "Double",
+            Token::Boolean(_, _) => "Boolean",
             Token::Identifier(_, _) => "Identifier",
             Token::Plus(_) => "Plus",
             Token::Minus(_) => "Minus",
@@ -111,6 +115,8 @@ impl Token {
             Token::BreakK(_) => "BreakK",
             Token::ContinueK(_) => "ContinueK",
             Token::ReturnK(_) => "ReturnK",
+            Token::And(_) => "And",
+            Token::Or(_) => "Or",
         }
         .to_string()
     }
@@ -119,6 +125,7 @@ impl Token {
         match self {
             Token::Int(_, pos) => pos.get_pos(),
             Token::Double(_, pos) => pos.get_pos(),
+            Token::Boolean(_, pos) => pos.get_pos(),
             Token::Identifier(_, pos) => pos.get_pos(),
             Token::Plus(pos) => pos.get_pos(),
             Token::Minus(pos) => pos.get_pos(),
@@ -152,6 +159,8 @@ impl Token {
             Token::BreakK(pos) => pos.get_pos(),
             Token::ContinueK(pos) => pos.get_pos(),
             Token::ReturnK(pos) => pos.get_pos(),
+            Token::And(pos) => pos.get_pos(),
+            Token::Or(pos) => pos.get_pos(),
         }
     }
 }

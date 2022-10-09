@@ -5,6 +5,7 @@ use std::fmt::Debug;
 pub enum Node {
     Int(IntNode),
     Double(DoubleNode),
+    Boolean(BooleanNode),
     Identifier(IdentifierNode),
     UnaryNumber(UnaryNumberNode),
     UnaryBoolean(UnaryBooleanNode),
@@ -28,6 +29,11 @@ pub struct IntNode {
 #[derive(Debug, Clone, Copy)]
 pub struct DoubleNode {
     pub value: f64,
+}
+// BooleanNode
+#[derive(Debug, Clone, Copy)]
+pub struct BooleanNode {
+    pub value: bool,
 }
 // IdentifierNode
 #[derive(Debug, Clone)]
@@ -99,6 +105,9 @@ pub enum Comparison {
     LessThanEq,    // <=
     GreaterThan,   // >
     GreaterThanEq, // >=
+    //Logical
+    And,
+    Or,
 }
 // BinaryOpNumberNode
 #[derive(Debug, Clone)]
@@ -157,6 +166,12 @@ impl BinaryOpBooleanNode {
     }
     pub fn deq(left: Box<Node>, right: Box<Node>) -> Node {
         BinaryOpBooleanNode::new(left, right, Comparison::DoubleEquals)
+    }
+    pub fn and(left: Box<Node>, right: Box<Node>) -> Node {
+        BinaryOpBooleanNode::new(left, right, Comparison::And)
+    }
+    pub fn or(left: Box<Node>, right: Box<Node>) -> Node {
+        BinaryOpBooleanNode::new(left, right, Comparison::Or)
     }
     pub fn neq(left: Box<Node>, right: Box<Node>) -> Node {
         BinaryOpBooleanNode::new(left, right, Comparison::NotEquals)

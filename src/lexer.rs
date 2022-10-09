@@ -85,6 +85,15 @@ impl Lexer {
         if let Some(keyord) = is_keyword(id.as_str(), PosRange::new(from.clone(), Some(to.clone())))
         {
             keyord
+        } else if id == "true".to_string() || id == "false".to_string() {
+            Token::Boolean(
+                if id == "true".to_string() {
+                    true
+                } else {
+                    false
+                },
+                PosRange::new(from, Some(to)),
+            )
         } else {
             Token::Identifier(id, PosRange::new(from, Some(to)))
         }
@@ -179,6 +188,14 @@ impl Lexer {
                         tokens.push(Token::GreaterThan(PosRange::new(from, None)));
                         self.next()
                     }
+                }
+                '&' => {
+                    tokens.push(Token::And(PosRange::new(self.get_pos(), None)));
+                    self.next()
+                }
+                '|' => {
+                    tokens.push(Token::Or(PosRange::new(self.get_pos(), None)));
+                    self.next()
                 }
                 '(' => {
                     tokens.push(Token::LParan(PosRange::new(self.get_pos(), None)));

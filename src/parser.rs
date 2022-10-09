@@ -15,6 +15,14 @@ impl Parser {
         Parser { tokens, pos: 0 }
     }
 
+    fn panic_invalid_syntax(&self, message: &str) -> String {
+        format!(
+            "Invalid Syntax {}: '{}' {message}",
+            self.curr().get_pos(),
+            self.curr().get_name()
+        )
+    }
+
     fn curr(&self) -> &Token {
         self.tokens.iter().nth(self.pos).unwrap()
     }
@@ -52,7 +60,7 @@ impl Parser {
             self.next();
         } else {
             panic!(
-                "Invalid Syntax {}: Expected {:} found {:}",
+                "Invalid Syntax {}: Expected {} found {}",
                 self.curr().get_pos(),
                 token_type,
                 tkn
@@ -91,7 +99,7 @@ impl Parser {
                         return res;
                     }
                     _ => {
-                        let res = self.equality();
+                        let res = self.logical_and_or();
                         self.eat(&Token::Semicolon(PosRange::empty()));
                         return res;
                     }
@@ -109,18 +117,20 @@ impl Parser {
             Token::LBrace(_) => {
                 return self.block_statement();
             }
-            _ => {
-                let res = self.equality();
-                self.eat(&Token::Semicolon(PosRange::empty()));
-                return res;
-            }
+            _ => panic!(
+                "{}",
+                self.panic_invalid_syntax(
+                    "Only (Variable and Function) Declaration are allowed in Global Scope",
+                )
+            ),
         }
     }
 
+    // Parses a Function Declaration Statement
     fn function_declaration_statement(&mut self) -> Box<Node> {
         self.eat(&Token::FnK(PosRange::empty()));
 
-        //Parses Function name
+        // Parses Function name
         let id = self.identifier();
 
         // Parses Funtion params
@@ -164,7 +174,7 @@ impl Parser {
 
         let id = self.identifier();
         self.eat(&Token::Equals(PosRange::empty()));
-        let value = self.equality();
+        let value = self.logical_and_or();
 
         declarations.push(Box::new(DeclarationNode::new(id, value)));
 
@@ -174,7 +184,7 @@ impl Parser {
             self.eat(&Token::Comma(PosRange::empty()));
             let id = self.identifier();
             self.eat(&Token::Equals(PosRange::empty()));
-            let value = self.equality();
+            let value = self.logical_and_or();
             declarations.push(Box::new(DeclarationNode::new(id, value)));
         }
 
@@ -185,7 +195,7 @@ impl Parser {
     fn assignment(&mut self) -> Box<Node> {
         let id = self.identifier();
         self.eat(&Token::Equals(PosRange::empty()));
-        let value = self.equality();
+        let value = self.logical_and_or();
         self.eat(&Token::Semicolon(PosRange::empty()));
         Box::new(AssignmentNode::new(id, value))
     }
@@ -206,18 +216,42 @@ impl Parser {
         let mut args = Vec::new();
 
         if !variant_eq(self.curr(), &Token::RParan(PosRange::empty())) {
-            args.push(self.equality());
+            args.push(self.logical_and_or());
         }
 
         while self.pos < self.tokens.len()
             && !variant_eq(self.curr(), &Token::RParan(PosRange::empty()))
         {
             self.eat(&Token::Comma(PosRange::empty()));
-            args.push(self.equality());
+            args.push(self.logical_and_or());
         }
 
         self.eat(&Token::RParan(PosRange::empty()));
         Box::new(FunctionCallNode::new(id, args))
+    }
+
+    /// Parses Logical & |
+
+    fn logical_and_or(&mut self) -> Box<Node> {
+        let mut res = self.equality();
+
+        if self.contains_tkn(
+            vec![
+                &Token::And(PosRange::empty()),
+                &Token::Or(PosRange::empty()),
+            ],
+            self.curr(),
+        ) {
+            if variant_eq(self.curr(), &Token::And(PosRange::empty())) {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::and(res, self.equality()));
+            } else if variant_eq(self.curr(), &Token::Or(PosRange::empty())) {
+                self.next();
+                res = Box::new(BinaryOpBooleanNode::or(res, self.equality()));
+            }
+        }
+
+        res
     }
 
     fn equality(&mut self) -> Box<Node> {
@@ -340,7 +374,7 @@ impl Parser {
         match self.curr() {
             Token::LParan(_) => {
                 self.eat(&Token::LParan(PosRange::empty()));
-                let res = self.equality();
+                let res = self.logical_and_or();
                 self.eat(&Token::RParan(PosRange::empty()));
                 res
             }
@@ -350,8 +384,8 @@ impl Parser {
                     res = self.function_call_statement();
                 } else {
                     res = Box::new(Node::Identifier(IdentifierNode { value: id.clone() }));
+                    self.next();
                 }
-                self.next();
                 res
             }
             Token::Plus(_) => {
@@ -365,12 +399,23 @@ impl Parser {
                 res
             }
             Token::Int(num, _) => {
-                let res = Box::new(Node::Int(IntNode { value: num.clone() }));
+                let res = Box::new(Node::Int(IntNode {
+                    value: num.to_owned(),
+                }));
                 self.next();
                 res
             }
             Token::Double(num, _) => {
-                let res = Box::new(Node::Double(DoubleNode { value: num.clone() }));
+                let res = Box::new(Node::Double(DoubleNode {
+                    value: num.to_owned(),
+                }));
+                self.next();
+                res
+            }
+            Token::Boolean(_bool, _) => {
+                let res = Box::new(Node::Boolean(BooleanNode {
+                    value: _bool.to_owned(),
+                }));
                 self.next();
                 res
             }

@@ -1,3 +1,4 @@
 fn main() {
-  println(10, 9);
+  println(true);
+  println(false);
 }
