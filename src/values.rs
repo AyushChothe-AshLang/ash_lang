@@ -6,6 +6,7 @@ pub enum Value {
     IntValue(i64),
     DoubleValue(f64),
     BooleanValue(bool),
+    ReturnValue(Box<Value>),
     None,
 }
 
@@ -16,6 +17,7 @@ impl Display for Value {
             Value::DoubleValue(d) => d.fmt(f),
             Value::BooleanValue(b) => b.fmt(f),
             Value::None => write!(f, "None"),
+            _ => write!(f, "Return"),
         }
     }
 }

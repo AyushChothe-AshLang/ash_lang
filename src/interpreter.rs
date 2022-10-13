@@ -45,6 +45,10 @@ impl Interpreter {
             Node::FunctionDeclaration(_node) => self.walk_function_declaration_node(_node, scope),
             Node::MultiDeclaration(_node) => self.walk_multi_declaration_node(_node, scope),
             Node::Declaration(_node) => self.walk_declaration_node(_node, scope),
+            Node::WhileLoop(_node) => self.walk_while_loop_node(_node, scope),
+            Node::IfStatement(_node) => self.walk_if_statement_node(_node, scope),
+            Node::ElifStatement(_) => panic!("This can't happen"),
+            Node::Return(_node) => self.walk_return_node(_node, scope),
         }
     }
 
@@ -60,6 +64,11 @@ impl Interpreter {
         Value::BooleanValue(node.value)
     }
 
+    fn walk_return_node(&mut self, node: &mut ReturnNode, scope: &mut ScopePtr) -> Value {
+        let res = self.walk(&mut node.res, scope);
+        Value::ReturnValue(Box::new(res))
+    }
+
     fn walk_identifier_node(&mut self, node: &IdentifierNode, scope: &mut ScopePtr) -> Value {
         let key = node.value.clone();
         scope.borrow().get_symbol(key)
@@ -67,13 +76,16 @@ impl Interpreter {
 
     fn walk_block_statement_node(
         &mut self,
-        node: &BlockStatementNode,
+        node: &mut BlockStatementNode,
         scope: &mut ScopePtr,
     ) -> Value {
         let mut local = Scope::new(scope.clone());
         let mut res = Value::None;
-        for mut stmt in node.value.clone() {
-            res = self.walk(&mut *stmt, &mut local);
+        for stmt in node.value.iter_mut() {
+            res = self.walk(stmt, &mut local);
+            if let Value::ReturnValue(_) = res {
+                return res;
+            }
         }
         res
     }
@@ -212,8 +224,8 @@ impl Interpreter {
         node: &mut MultiDeclarationNode,
         scope: &mut ScopePtr,
     ) -> Value {
-        for mut dec in node.declarations.clone() {
-            self.walk(&mut dec, scope);
+        for dec in node.declarations.iter_mut() {
+            self.walk(dec, scope);
         }
 
         Value::None
@@ -243,30 +255,85 @@ impl Interpreter {
         let id = node.id.clone();
         if let Some(_fn) = self.builtin.get(&id) {
             let mut vals = vec![];
-            for mut arg in node.args.clone() {
-                vals.push(self.walk(&mut arg, scope));
+            for arg in node.args.iter_mut() {
+                vals.push(self.walk(arg, scope));
             }
             return self.builtin.get(&id).unwrap()(vals);
+        } else {
+            let mut _fn = scope.borrow().get_function(id);
+            let mut vals = vec![];
+            for arg in node.args.iter_mut() {
+                vals.push(self.walk(arg, scope));
+            }
+
+            if vals.len() != _fn.params.len() {
+                panic!("Invalid number of arguments to function")
+            }
+
+            let mut fn_scope = Scope::new(scope.clone());
+
+            for (key, value) in _fn.params.iter().zip(vals.iter()) {
+                fn_scope
+                    .borrow_mut()
+                    .declare_symbol(key.clone(), value.clone());
+            }
+
+            let res = self.walk(&mut _fn.body, &mut fn_scope);
+
+            if let Value::ReturnValue(_ret) = res {
+                return *_ret;
+            } else {
+                res
+            }
         }
+    }
 
-        let mut _fn = scope.borrow().get_function(id);
-        let mut vals = vec![];
-        for mut arg in node.args.clone() {
-            vals.push(self.walk(&mut arg, scope));
+    fn walk_while_loop_node(&mut self, node: &mut WhileLoopNode, scope: &mut ScopePtr) -> Value {
+        let mut condition = self.walk(&mut node.condition, scope);
+
+        while match condition {
+            Value::BooleanValue(_b) => _b,
+            _ => panic!("Invalid Type in While Condition"),
+        } {
+            let res = self.walk(&mut node.body, scope);
+            if let Value::ReturnValue(_) = res {
+                return res;
+            }
+            condition = self.walk(&mut node.condition, scope);
         }
+        Value::None
+    }
+    fn walk_if_statement_node(
+        &mut self,
+        node: &mut IfStatementNode,
+        scope: &mut ScopePtr,
+    ) -> Value {
+        let condition = self.walk(&mut node.condition, scope);
 
-        if vals.len() != _fn.params.len() {
-            panic!("Invalid number of arguments to function")
+        if match condition {
+            Value::BooleanValue(_b) => _b,
+            _ => panic!("Invalid Type in If Condition"),
+        } {
+            self.walk(&mut node.true_block, scope)
+        } else {
+            for elif in node.elif_blocks.to_owned() {
+                match *elif {
+                    Node::ElifStatement(mut _node) => {
+                        let condition = self.walk(&mut _node.condition, scope);
+                        if match condition {
+                            Value::BooleanValue(_b) => _b,
+                            _ => todo!(),
+                        } {
+                            return self.walk(&mut _node.true_block, scope);
+                        }
+                    }
+                    _ => panic!("Elif Node Expected"),
+                }
+            }
+            if let Some(mut else_block) = node.else_block.as_mut() {
+                return self.walk(&mut else_block, scope);
+            }
+            Value::None
         }
-
-        let mut fn_scope = Scope::new(scope.clone());
-
-        for (key, value) in _fn.params.iter().zip(vals.iter()) {
-            fn_scope
-                .borrow_mut()
-                .declare_symbol(key.clone(), value.clone());
-        }
-
-        self.walk(&mut _fn.body, &mut fn_scope)
     }
 }

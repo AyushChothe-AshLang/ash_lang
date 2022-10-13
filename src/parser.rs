@@ -113,10 +113,6 @@ impl Parser {
                 // Variable Declaration
                 return self.multi_declaration_node();
             }
-            // TODO: Remove This
-            Token::LBrace(_) => {
-                return self.block_statement();
-            }
             _ => panic!(
                 "{}",
                 self.panic_invalid_syntax(
@@ -124,6 +120,114 @@ impl Parser {
                 )
             ),
         }
+    }
+
+    fn control_flow_statement(&mut self) -> Box<Node> {
+        match self.curr() {
+            Token::Identifier(_, _) => {
+                // Assignment or FunctionCall
+                match self.lookahead() {
+                    Token::Equals(_) => {
+                        return self.assignment();
+                    }
+                    Token::LParan(_) => {
+                        let res = self.function_call_statement();
+                        self.eat(&Token::Semicolon(PosRange::empty()));
+                        return res;
+                    }
+                    _ => {
+                        let res = self.logical_and_or();
+                        self.eat(&Token::Semicolon(PosRange::empty()));
+                        return res;
+                    }
+                }
+            }
+            Token::FnK(_) => {
+                // Function Declaration
+                return self.function_declaration_statement();
+            }
+            Token::LetK(_) => {
+                // Variable Declaration
+                return self.multi_declaration_node();
+            }
+            Token::LBrace(_) => {
+                // Block Statement
+                return self.block_statement();
+            }
+            Token::IfK(_) => {
+                // If Statetment
+                return self.if_statement();
+            }
+            Token::WhileK(_) => {
+                // While Loop
+                return self.while_loop_statement();
+            }
+            Token::ReturnK(_) => {
+                // Return Statement
+                return self.return_statement();
+            }
+            _ => {
+                let res = self.logical_and_or();
+                self.eat(&Token::Semicolon(PosRange::empty()));
+                res
+            }
+        }
+    }
+
+    fn return_statement(&mut self) -> Box<Node> {
+        self.eat(&Token::ReturnK(PosRange::empty()));
+        let res = self.logical_and_or();
+        self.eat(&Token::Semicolon(PosRange::empty()));
+        Box::new(ReturnNode::new(res))
+    }
+
+    fn if_statement(&mut self) -> Box<Node> {
+        // Parse if condition
+        self.eat(&Token::IfK(PosRange::empty()));
+        self.eat(&Token::LParan(PosRange::empty()));
+        let condition = self.logical_and_or();
+        self.eat(&Token::RParan(PosRange::empty()));
+        let true_block = self.block_statement();
+
+        // Parse elif statements
+        let mut elif_blocks: Vec<Box<Node>> = Vec::new();
+        while self.pos < self.tokens.len()
+            && variant_eq(self.curr(), &Token::ElifK(PosRange::empty()))
+        {
+            self.eat(&&Token::ElifK(PosRange::empty()));
+            self.eat(&&Token::LParan(PosRange::empty()));
+
+            let condition = self.logical_and_or();
+            self.eat(&Token::RParan(PosRange::empty()));
+            let true_block = self.block_statement();
+            elif_blocks.push(Box::new(ElifStatementNode::new(condition, true_block)));
+        }
+
+        // Parse else block
+        let mut else_block = None;
+        if variant_eq(self.curr(), &Token::ElseK(PosRange::empty())) {
+            self.eat(&&Token::ElseK(PosRange::empty()));
+            else_block = Some(self.block_statement());
+        }
+        Box::new(IfStatementNode::new(
+            condition,
+            true_block,
+            elif_blocks,
+            else_block,
+        ))
+    }
+
+    // While Loop
+    fn while_loop_statement(&mut self) -> Box<Node> {
+        self.eat(&Token::WhileK(PosRange::empty()));
+
+        self.eat(&Token::LParan(PosRange::empty()));
+        let condition = self.logical_and_or();
+        self.eat(&Token::RParan(PosRange::empty()));
+
+        let body = self.block_statement();
+
+        Box::new(WhileLoopNode::new(condition, body))
     }
 
     // Parses a Function Declaration Statement
@@ -161,7 +265,7 @@ impl Parser {
         let mut value = Vec::new();
         self.eat(&Token::LBrace(PosRange::empty()));
         while !variant_eq(self.curr(), &Token::RBrace(PosRange::empty())) {
-            value.push(self.primary_statements());
+            value.push(self.control_flow_statement());
         }
         self.eat(&Token::RBrace(PosRange::empty()));
         return Box::new(BlockStatementNode::new(value));

@@ -17,6 +17,10 @@ pub enum Node {
     BlockStatement(BlockStatementNode),
     FunctionCall(FunctionCallNode),
     FunctionDeclaration(FunctionDeclarationNode),
+    WhileLoop(WhileLoopNode),
+    IfStatement(IfStatementNode),
+    ElifStatement(ElifStatementNode),
+    Return(ReturnNode),
 }
 
 // IntNode
@@ -249,5 +253,67 @@ pub struct DeclarationNode {
 impl DeclarationNode {
     pub fn new(id: String, value: Box<Node>) -> Node {
         Node::Declaration(DeclarationNode { id, value })
+    }
+}
+
+// WhileLoopNode
+#[derive(Debug, Clone)]
+pub struct WhileLoopNode {
+    pub condition: Box<Node>,
+    pub body: Box<Node>,
+}
+impl WhileLoopNode {
+    pub fn new(condition: Box<Node>, body: Box<Node>) -> Node {
+        Node::WhileLoop(WhileLoopNode { condition, body })
+    }
+}
+
+// IfStatementNode
+#[derive(Debug, Clone)]
+pub struct IfStatementNode {
+    pub condition: Box<Node>,
+    pub true_block: Box<Node>,
+    pub elif_blocks: Vec<Box<Node>>,
+    pub else_block: Option<Box<Node>>,
+}
+impl IfStatementNode {
+    pub fn new(
+        condition: Box<Node>,
+        true_block: Box<Node>,
+        elif_blocks: Vec<Box<Node>>,
+        else_block: Option<Box<Node>>,
+    ) -> Node {
+        Node::IfStatement(IfStatementNode {
+            condition,
+            true_block,
+            elif_blocks,
+            else_block,
+        })
+    }
+}
+
+// ElifStatementNode
+#[derive(Debug, Clone)]
+pub struct ElifStatementNode {
+    pub condition: Box<Node>,
+    pub true_block: Box<Node>,
+}
+impl ElifStatementNode {
+    pub fn new(condition: Box<Node>, true_block: Box<Node>) -> Node {
+        Node::ElifStatement(ElifStatementNode {
+            condition,
+            true_block,
+        })
+    }
+}
+
+// ReturnNode
+#[derive(Debug, Clone)]
+pub struct ReturnNode {
+    pub res: Box<Node>,
+}
+impl ReturnNode {
+    pub fn new(res: Box<Node>) -> Node {
+        Node::Return(ReturnNode { res })
     }
 }
