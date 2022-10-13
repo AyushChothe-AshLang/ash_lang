@@ -6,5 +6,9 @@ fn fib(n) {
 }
 
 fn main() {
-  println(fib(30));
+  let i = 0, n = 35;
+  while (i < n) {
+    println(fib(i));
+    i = i + 1;
+  }
 }
