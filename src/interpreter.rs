@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::built_in::*;
 
@@ -40,7 +41,7 @@ impl Interpreter {
             Node::UnaryBoolean(_node) => self.walk_unary_boolean_node(_node, scope),
             Node::Assignment(_node) => self.walk_assignment_node(_node, scope),
             Node::Identifier(_node) => self.walk_identifier_node(_node, scope),
-            Node::BlockStatement(_node) => self.walk_block_statement_node(_node, scope),
+            Node::BlockStatement(_node) => self.walk_block_statement_node(_node, scope, true),
             Node::FunctionCall(_node) => self.walk_function_call_node(_node, scope),
             Node::FunctionDeclaration(_node) => self.walk_function_declaration_node(_node, scope),
             Node::MultiDeclaration(_node) => self.walk_multi_declaration_node(_node, scope),
@@ -78,13 +79,23 @@ impl Interpreter {
         &mut self,
         node: &mut BlockStatementNode,
         scope: &mut ScopePtr,
+        create_scope: bool,
     ) -> Value {
-        let mut local = Scope::new(scope.clone());
         let mut res = Value::None;
-        for stmt in node.value.iter_mut() {
-            res = self.walk(stmt, &mut local);
-            if let Value::ReturnValue(_) = res {
-                return res;
+        if create_scope {
+            let local = &mut Scope::new(scope.clone());
+            for stmt in node.value.iter_mut() {
+                res = self.walk(stmt, local);
+                if let Value::ReturnValue(_) = res {
+                    return res;
+                }
+            }
+        } else {
+            for stmt in node.value.iter_mut() {
+                res = self.walk(stmt, scope);
+                if let Value::ReturnValue(_) = res {
+                    return res;
+                }
             }
         }
         res
@@ -243,7 +254,9 @@ impl Interpreter {
         scope: &mut ScopePtr,
     ) -> Value {
         let fn_id = node.id.clone();
-        scope.borrow_mut().declare_function(fn_id, node.clone());
+        scope
+            .borrow_mut()
+            .declare_function(fn_id, Rc::new(node.clone()));
         Value::None
     }
 
@@ -285,7 +298,14 @@ impl Interpreter {
                 .declare_symbol(key.clone(), value.clone());
         }
 
-        let res = self.walk(&mut _fn.body, &mut fn_scope);
+        let res = self.walk_block_statement_node(
+            match _fn.body.clone().as_mut() {
+                Node::BlockStatement(ref mut _node) => _node,
+                _ => panic!("Expected BlockStatement"),
+            },
+            &mut fn_scope,
+            false,
+        );
 
         if let Value::ReturnValue(_ret) = res {
             return *_ret;
@@ -319,9 +339,9 @@ impl Interpreter {
         }
 
         // Run Elifs
-        for elif in node.elif_blocks.to_owned() {
-            match *elif {
-                Node::ElifStatement(mut _node) => {
+        for elif in node.elif_blocks.iter_mut() {
+            match **elif {
+                Node::ElifStatement(ref mut _node) => {
                     if match self.walk(&mut _node.condition, scope) {
                         Value::BooleanValue(_b) => _b,
                         _ => todo!(),

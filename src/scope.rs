@@ -7,7 +7,7 @@ pub type ScopePtr = Rc<RefCell<Scope>>;
 #[derive(Debug)]
 pub struct Scope {
     parent: Option<ScopePtr>,
-    fn_table: HashMap<String, FunctionDeclarationNode>,
+    fn_table: HashMap<String, Rc<FunctionDeclarationNode>>,
     var_table: HashMap<String, Value>,
 }
 
@@ -21,7 +21,7 @@ impl Scope {
     }
     pub fn from(
         var_table: HashMap<String, Value>,
-        fn_table: HashMap<String, FunctionDeclarationNode>,
+        fn_table: HashMap<String, Rc<FunctionDeclarationNode>>,
     ) -> ScopePtr {
         Rc::new(RefCell::new(Scope {
             parent: None,
@@ -60,11 +60,11 @@ impl Scope {
         }
     }
 
-    pub fn declare_function(&mut self, key: String, value: FunctionDeclarationNode) {
+    pub fn declare_function(&mut self, key: String, value: Rc<FunctionDeclarationNode>) {
         self.fn_table.insert(key, value);
     }
 
-    pub fn get_function(&self, key: String) -> FunctionDeclarationNode {
+    pub fn get_function(&self, key: String) -> Rc<FunctionDeclarationNode> {
         match self.fn_table.get(&key) {
             Some(val) => val.clone(),
             None => {
