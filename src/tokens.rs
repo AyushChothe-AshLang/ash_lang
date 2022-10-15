@@ -38,6 +38,7 @@ pub enum Token {
     ElifK(PosRange),     // elif
     ElseK(PosRange),     // else
     FnK(PosRange),       // fn
+    CFnK(PosRange),      // cfn
     LetK(PosRange),      // let
     BreakK(PosRange),    // break
     ContinueK(PosRange), // continue
@@ -111,6 +112,7 @@ impl Token {
             Token::ElifK(_) => "ElifK",
             Token::ElseK(_) => "ElseK",
             Token::FnK(_) => "FnK",
+            Token::CFnK(_) => "CFnK",
             Token::LetK(_) => "LetK",
             Token::BreakK(_) => "BreakK",
             Token::ContinueK(_) => "ContinueK",
@@ -155,6 +157,7 @@ impl Token {
             Token::ElifK(pos) => pos.get_pos(),
             Token::ElseK(pos) => pos.get_pos(),
             Token::FnK(pos) => pos.get_pos(),
+            Token::CFnK(pos) => pos.get_pos(),
             Token::LetK(pos) => pos.get_pos(),
             Token::BreakK(pos) => pos.get_pos(),
             Token::ContinueK(pos) => pos.get_pos(),

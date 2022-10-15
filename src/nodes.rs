@@ -1,4 +1,5 @@
-use std::fmt::Debug;
+use crate::values::Value;
+use std::{collections::HashMap, fmt::Debug};
 
 // Node
 #[derive(Debug, Clone)]
@@ -198,11 +199,11 @@ impl AssignmentNode {
 // BlockStatementNode
 #[derive(Debug, Clone)]
 pub struct BlockStatementNode {
-    pub value: Vec<Box<Node>>,
+    pub value: Vec<Node>,
 }
 
 impl BlockStatementNode {
-    pub fn new(value: Vec<Box<Node>>) -> Node {
+    pub fn new(value: Vec<Node>) -> Node {
         Node::BlockStatement(BlockStatementNode { value })
     }
 }
@@ -211,11 +212,11 @@ impl BlockStatementNode {
 #[derive(Debug, Clone)]
 pub struct FunctionCallNode {
     pub id: String,
-    pub args: Vec<Box<Node>>,
+    pub args: Vec<Node>,
 }
 
 impl FunctionCallNode {
-    pub fn new(id: String, args: Vec<Box<Node>>) -> Node {
+    pub fn new(id: String, args: Vec<Node>) -> Node {
         Node::FunctionCall(FunctionCallNode { id, args })
     }
 }
@@ -226,21 +227,44 @@ pub struct FunctionDeclarationNode {
     pub id: String,
     pub params: Vec<String>,
     pub body: Box<Node>,
+    pub memo: HashMap<Vec<Value>, Value>,
 }
 
 impl FunctionDeclarationNode {
-    pub fn new(id: String, params: Vec<String>, body: Box<Node>) -> Node {
-        Node::FunctionDeclaration(FunctionDeclarationNode { id, params, body })
+    pub fn new_fn(id: String, params: Vec<String>, body: Box<Node>) -> Node {
+        Node::FunctionDeclaration(FunctionDeclarationNode {
+            id,
+            params,
+            body,
+            memo: HashMap::new(),
+        })
+    }
+    pub fn new_cfn(id: String, params: Vec<String>, body: Box<Node>) -> Node {
+        Node::FunctionDeclaration(FunctionDeclarationNode {
+            id,
+            params,
+            body,
+            memo: HashMap::new(),
+        })
+    }
+    pub fn contains_key(&self, args: &Vec<Value>) -> bool {
+        self.memo.contains_key(args)
+    }
+    pub fn set_cache(&mut self, args: Vec<Value>, res: Value) {
+        self.memo.insert(args, res);
+    }
+    pub fn get_cache(&self, args: &Vec<Value>) -> Value {
+        self.memo.get(args).unwrap().clone()
     }
 }
 
 // MultiDeclarationNode
 #[derive(Debug, Clone)]
 pub struct MultiDeclarationNode {
-    pub declarations: Vec<Box<Node>>,
+    pub declarations: Vec<Node>,
 }
 impl MultiDeclarationNode {
-    pub fn new(declarations: Vec<Box<Node>>) -> Node {
+    pub fn new(declarations: Vec<Node>) -> Node {
         Node::MultiDeclaration(MultiDeclarationNode { declarations })
     }
 }
@@ -273,14 +297,14 @@ impl WhileLoopNode {
 pub struct IfStatementNode {
     pub condition: Box<Node>,
     pub true_block: Box<Node>,
-    pub elif_blocks: Vec<Box<Node>>,
+    pub elif_blocks: Vec<Node>,
     pub else_block: Option<Box<Node>>,
 }
 impl IfStatementNode {
     pub fn new(
         condition: Box<Node>,
         true_block: Box<Node>,
-        elif_blocks: Vec<Box<Node>>,
+        elif_blocks: Vec<Node>,
         else_block: Option<Box<Node>>,
     ) -> Node {
         Node::IfStatement(IfStatementNode {

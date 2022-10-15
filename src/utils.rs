@@ -11,6 +11,7 @@ pub mod utils {
             ("else", Token::ElseK(pos.clone())),
             ("elif", Token::ElifK(pos.clone())),
             ("fn", Token::FnK(pos.clone())),
+            ("cfn", Token::CFnK(pos.clone())),
             ("let", Token::LetK(pos.clone())),
             ("break", Token::BreakK(pos.clone())),
             ("continue", Token::ContinueK(pos.clone())),

@@ -1,3 +1,5 @@
+use ordered_float::OrderedFloat;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -11,7 +13,7 @@ type BuiltInFn = fn(Vec<Value>) -> Value;
 
 pub struct Interpreter {
     ast: Box<Node>,
-    builtin: HashMap<String, BuiltInFn>,
+    builtin: Rc<HashMap<String, BuiltInFn>>,
 }
 
 impl Interpreter {
@@ -22,7 +24,10 @@ impl Interpreter {
             (String::from("min"), ash_min as BuiltInFn),
             (String::from("max"), ash_max as BuiltInFn),
         ]);
-        Interpreter { ast, builtin }
+        Interpreter {
+            ast,
+            builtin: Rc::new(builtin),
+        }
     }
 
     pub fn eval(&mut self) -> Value {
@@ -58,7 +63,7 @@ impl Interpreter {
     }
 
     fn walk_double_node(&self, node: &DoubleNode) -> Value {
-        Value::DoubleValue(node.value)
+        Value::DoubleValue(OrderedFloat(node.value))
     }
 
     fn walk_boolean_node(&self, node: &BooleanNode) -> Value {
@@ -71,7 +76,7 @@ impl Interpreter {
     }
 
     fn walk_identifier_node(&mut self, node: &IdentifierNode, scope: &mut ScopePtr) -> Value {
-        let key = node.value.clone();
+        let key = &node.value;
         scope.borrow().get_symbol(key)
     }
 
@@ -200,7 +205,7 @@ impl Interpreter {
                 true
             }
             Value::DoubleValue(d) => {
-                res = d;
+                res = d.0;
                 false
             }
             _ => panic!("Invalid Type"),
@@ -211,7 +216,7 @@ impl Interpreter {
                 true
             }
             Value::DoubleValue(d) => {
-                res = op(res, d);
+                res = op(res, d.0);
                 false
             }
             _ => panic!("Invalid Type"),
@@ -219,12 +224,12 @@ impl Interpreter {
         if is_left_int && is_right_int && res.fract() == 0.0 {
             Value::IntValue(res as i64)
         } else {
-            Value::DoubleValue(res)
+            Value::DoubleValue(OrderedFloat(res))
         }
     }
 
     fn walk_assignment_node(&mut self, node: &mut AssignmentNode, scope: &mut ScopePtr) -> Value {
-        let id = node.id.clone();
+        let id = &node.id;
         let value = self.walk(&mut node.value, scope);
         scope.borrow_mut().set_symbol(id, value);
         Value::None
@@ -242,9 +247,9 @@ impl Interpreter {
         Value::None
     }
     fn walk_declaration_node(&mut self, node: &mut DeclarationNode, scope: &mut ScopePtr) -> Value {
-        let id = node.id.clone();
+        let id = &node.id;
         let value = self.walk(&mut node.value, scope);
-        scope.borrow_mut().declare_symbol(id, value);
+        scope.borrow_mut().declare_symbol(id.to_owned(), value);
         Value::None
     }
 
@@ -253,10 +258,10 @@ impl Interpreter {
         node: &FunctionDeclarationNode,
         scope: &mut ScopePtr,
     ) -> Value {
-        let fn_id = node.id.clone();
+        let fn_id = &node.id;
         scope
             .borrow_mut()
-            .declare_function(fn_id, Rc::new(node.clone()));
+            .declare_function(fn_id.to_owned(), Rc::new(RefCell::new(node.to_owned())));
         Value::None
     }
 
@@ -266,51 +271,55 @@ impl Interpreter {
         scope: &mut ScopePtr,
     ) -> Value {
         // Builtin Function
-        let id = node.id.clone();
-        if let Some(_fn) = self.builtin.get(&id) {
+        let id = &node.id;
+        if let Some(_fn) = self.builtin.clone().get(id) {
             let mut vals = vec![];
             for arg in node.args.iter_mut() {
-                vals.push(self.walk(arg, scope));
+                let val = self.walk(arg, scope);
+                vals.push(val);
             }
-            return self.builtin.get(&id).unwrap()(vals);
+            return (_fn)(vals);
         }
 
         // AshLang Function
-        let mut _fn = scope.borrow().get_function(id);
+        let mut _fn = scope.borrow().get_function(id).clone();
         let mut vals = vec![];
         for arg in node.args.iter_mut() {
             vals.push(self.walk(arg, scope));
         }
 
-        if vals.len() != _fn.params.len() {
+        if vals.len() != _fn.borrow().params.len() {
             panic!("Invalid number of arguments to function")
         }
 
-        let mut fn_scope = Scope::new(scope.clone());
+        if _fn.borrow().memo.contains_key(&vals) {
+            _fn.borrow().memo.get(&vals).unwrap().clone()
+        } else {
+            let mut fn_scope = Scope::new(scope.clone());
 
-        fn_scope
-            .borrow_mut()
-            .declare_function(node.id.clone(), _fn.clone());
+            for (key, value) in _fn.borrow().params.iter().zip(vals.iter()) {
+                fn_scope
+                    .borrow_mut()
+                    .declare_symbol(key.clone(), value.clone());
+            }
 
-        for (key, value) in _fn.params.iter().zip(vals.iter()) {
-            fn_scope
-                .borrow_mut()
-                .declare_symbol(key.clone(), value.clone());
+            let mut res = self.walk_block_statement_node(
+                match _fn.borrow().body.to_owned().as_mut() {
+                    Node::BlockStatement(ref mut _node) => _node,
+                    _ => panic!("Expected BlockStatement"),
+                },
+                &mut fn_scope,
+                false,
+            );
+
+            if let Value::ReturnValue(_ret) = res {
+                res = *_ret;
+            }
+
+            _fn.borrow_mut().memo.insert(vals, res.clone());
+
+            res
         }
-
-        let res = self.walk_block_statement_node(
-            match _fn.body.clone().as_mut() {
-                Node::BlockStatement(ref mut _node) => _node,
-                _ => panic!("Expected BlockStatement"),
-            },
-            &mut fn_scope,
-            false,
-        );
-
-        if let Value::ReturnValue(_ret) = res {
-            return *_ret;
-        }
-        res
     }
 
     fn walk_while_loop_node(&mut self, node: &mut WhileLoopNode, scope: &mut ScopePtr) -> Value {
@@ -340,7 +349,7 @@ impl Interpreter {
 
         // Run Elifs
         for elif in node.elif_blocks.iter_mut() {
-            match **elif {
+            match *elif {
                 Node::ElifStatement(ref mut _node) => {
                     if match self.walk(&mut _node.condition, scope) {
                         Value::BooleanValue(_b) => _b,

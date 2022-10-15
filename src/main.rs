@@ -15,9 +15,9 @@ use lexer::Lexer;
 use parser::Parser;
 fn main() {
     // let code = String::from();
-    let code = fs::read_to_string("/mnt/d/RustProjects/math_eval/src/code.ash")
-        // let code = fs::read_to_string("D:/RustProjects/math_eval/src/code.ash")
-        .expect("Should have been able to read the file");
+    // let code = fs::read_to_string("/mnt/d/RustProjects/math_eval/src/code.ash")
+    let code =
+        fs::read_to_string("./src/code.ash").expect("Should have been able to read the file");
     let mut lexer = Lexer::new(code);
     let tokens = lexer.tokenize();
     // println!("{:?}", tokens);

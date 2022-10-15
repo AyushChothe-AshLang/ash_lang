@@ -1,10 +1,10 @@
+use ordered_float::OrderedFloat;
 use std::fmt::Display;
-
 // Value
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
 pub enum Value {
     IntValue(i64),
-    DoubleValue(f64),
+    DoubleValue(OrderedFloat<f64>),
     BooleanValue(bool),
     ReturnValue(Box<Value>),
     None,

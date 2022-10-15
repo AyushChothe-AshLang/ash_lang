@@ -71,16 +71,13 @@ impl Parser {
     pub fn parse(&mut self) -> Box<Node> {
         let mut res = Vec::new();
         while !variant_eq(self.curr(), &Token::EOF(PosRange::empty())) {
-            res.push(self.primary_statements());
+            res.push(*self.primary_statements());
         }
         if !variant_eq(self.curr(), &Token::EOF(PosRange::empty())) {
             panic!("Invalid Syntax {}", self.curr().get_pos());
         }
         // Invoke Main
-        res.push(Box::new(FunctionCallNode::new(
-            String::from("main"),
-            Vec::new(),
-        )));
+        res.push(FunctionCallNode::new(String::from("main"), Vec::new()));
 
         Box::new(BlockStatementNode::new(res))
     }
@@ -107,7 +104,11 @@ impl Parser {
             }
             Token::FnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement();
+                return self.function_declaration_statement(false);
+            }
+            Token::CFnK(_) => {
+                // Function Declaration
+                return self.function_declaration_statement(true);
             }
             Token::LetK(_) => {
                 // Variable Declaration
@@ -144,7 +145,11 @@ impl Parser {
             }
             Token::FnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement();
+                return self.function_declaration_statement(false);
+            }
+            Token::CFnK(_) => {
+                // Function Declaration
+                return self.function_declaration_statement(true);
             }
             Token::LetK(_) => {
                 // Variable Declaration
@@ -190,7 +195,7 @@ impl Parser {
         let true_block = self.block_statement();
 
         // Parse elif statements
-        let mut elif_blocks: Vec<Box<Node>> = Vec::new();
+        let mut elif_blocks: Vec<Node> = Vec::new();
         while self.pos < self.tokens.len()
             && variant_eq(self.curr(), &Token::ElifK(PosRange::empty()))
         {
@@ -200,7 +205,7 @@ impl Parser {
             let condition = self.logical_and_or();
             self.eat(&Token::RParan(PosRange::empty()));
             let true_block = self.block_statement();
-            elif_blocks.push(Box::new(ElifStatementNode::new(condition, true_block)));
+            elif_blocks.push(ElifStatementNode::new(condition, true_block));
         }
 
         // Parse else block
@@ -231,8 +236,12 @@ impl Parser {
     }
 
     // Parses a Function Declaration Statement
-    fn function_declaration_statement(&mut self) -> Box<Node> {
-        self.eat(&Token::FnK(PosRange::empty()));
+    fn function_declaration_statement(&mut self, is_cached: bool) -> Box<Node> {
+        if is_cached {
+            self.eat(&Token::CFnK(PosRange::empty()));
+        } else {
+            self.eat(&Token::FnK(PosRange::empty()));
+        }
 
         // Parses Function name
         let id = self.identifier();
@@ -258,14 +267,18 @@ impl Parser {
         // Parses Function body
         let body = self.block_statement();
 
-        Box::new(FunctionDeclarationNode::new(id, params, body))
+        if is_cached {
+            Box::new(FunctionDeclarationNode::new_cfn(id, params, body))
+        } else {
+            Box::new(FunctionDeclarationNode::new_fn(id, params, body))
+        }
     }
 
     fn block_statement(&mut self) -> Box<Node> {
         let mut value = Vec::new();
         self.eat(&Token::LBrace(PosRange::empty()));
         while !variant_eq(self.curr(), &Token::RBrace(PosRange::empty())) {
-            value.push(self.control_flow_statement());
+            value.push(*self.control_flow_statement());
         }
         self.eat(&Token::RBrace(PosRange::empty()));
         return Box::new(BlockStatementNode::new(value));
@@ -280,7 +293,7 @@ impl Parser {
         self.eat(&Token::Equals(PosRange::empty()));
         let value = self.logical_and_or();
 
-        declarations.push(Box::new(DeclarationNode::new(id, value)));
+        declarations.push(DeclarationNode::new(id, value));
 
         while self.pos < self.tokens.len()
             && variant_eq(self.curr(), &Token::Comma(PosRange::empty()))
@@ -289,7 +302,7 @@ impl Parser {
             let id = self.identifier();
             self.eat(&Token::Equals(PosRange::empty()));
             let value = self.logical_and_or();
-            declarations.push(Box::new(DeclarationNode::new(id, value)));
+            declarations.push(DeclarationNode::new(id, value));
         }
 
         self.eat(&Token::Semicolon(PosRange::empty()));
@@ -320,14 +333,14 @@ impl Parser {
         let mut args = Vec::new();
 
         if !variant_eq(self.curr(), &Token::RParan(PosRange::empty())) {
-            args.push(self.logical_and_or());
+            args.push(*self.logical_and_or());
         }
 
         while self.pos < self.tokens.len()
             && !variant_eq(self.curr(), &Token::RParan(PosRange::empty()))
         {
             self.eat(&Token::Comma(PosRange::empty()));
-            args.push(self.logical_and_or());
+            args.push(*self.logical_and_or());
         }
 
         self.eat(&Token::RParan(PosRange::empty()));
