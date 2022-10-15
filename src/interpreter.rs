@@ -279,22 +279,26 @@ impl Interpreter {
                 vals.push(val);
             }
             return (_fn)(vals);
-        }
-
-        // AshLang Function
-        let mut _fn = scope.borrow().get_function(id).clone();
-        let mut vals = vec![];
-        for arg in node.args.iter_mut() {
-            vals.push(self.walk(arg, scope));
-        }
-
-        if vals.len() != _fn.borrow().params.len() {
-            panic!("Invalid number of arguments to function")
-        }
-
-        if _fn.borrow().memo.contains_key(&vals) {
-            _fn.borrow().memo.get(&vals).unwrap().clone()
         } else {
+            let _fn = scope.borrow().get_function(id).clone();
+
+            // AshLang Function
+            let mut vals = vec![];
+            for arg in node.args.iter_mut() {
+                vals.push(self.walk(arg, scope));
+            }
+
+            if vals.len() != _fn.borrow().params.len() {
+                panic!("Invalid number of arguments to function")
+            }
+
+            // Return Memo Value if CFn
+            if _fn.borrow().memo.is_some() {
+                if _fn.borrow().contains_key(&vals) {
+                    return _fn.borrow().get_cache(&vals);
+                }
+            }
+
             let mut fn_scope = Scope::new(scope.clone());
 
             for (key, value) in _fn.borrow().params.iter().zip(vals.iter()) {
@@ -316,7 +320,10 @@ impl Interpreter {
                 res = *_ret;
             }
 
-            _fn.borrow_mut().memo.insert(vals, res.clone());
+            // Store Memo Value in CFn
+            if _fn.borrow().memo.is_some() {
+                _fn.borrow().set_cache(vals, res.clone());
+            }
 
             res
         }

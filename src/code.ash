@@ -1,4 +1,4 @@
-fn fib(n) {
+cfn fib(n) {
   if (n <= 1) {
     return n;
   }
@@ -6,9 +6,15 @@ fn fib(n) {
 }
 
 fn main() {
-  let i = 0, n = 35;
+  let x = 20;
+  let i = 0, n = x;
   while (i < n) {
     println(fib(i));
     i = i + 1;
+  }
+  let i = x, n = 0;
+  while (i >= n) {
+    println(fib(i));
+    i = i - 1;
   }
 }

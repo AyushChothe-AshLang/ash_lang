@@ -1,5 +1,5 @@
 use crate::values::Value;
-use std::{collections::HashMap, fmt::Debug};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
 // Node
 #[derive(Debug, Clone)]
@@ -227,7 +227,7 @@ pub struct FunctionDeclarationNode {
     pub id: String,
     pub params: Vec<String>,
     pub body: Box<Node>,
-    pub memo: HashMap<Vec<Value>, Value>,
+    pub memo: Option<RefCell<HashMap<Vec<Value>, Value>>>,
 }
 
 impl FunctionDeclarationNode {
@@ -236,7 +236,7 @@ impl FunctionDeclarationNode {
             id,
             params,
             body,
-            memo: HashMap::new(),
+            memo: None,
         })
     }
     pub fn new_cfn(id: String, params: Vec<String>, body: Box<Node>) -> Node {
@@ -244,17 +244,23 @@ impl FunctionDeclarationNode {
             id,
             params,
             body,
-            memo: HashMap::new(),
+            memo: Some(RefCell::new(HashMap::new())),
         })
     }
     pub fn contains_key(&self, args: &Vec<Value>) -> bool {
-        self.memo.contains_key(args)
+        self.memo.as_ref().unwrap().borrow().contains_key(args)
     }
-    pub fn set_cache(&mut self, args: Vec<Value>, res: Value) {
-        self.memo.insert(args, res);
+    pub fn set_cache(&self, args: Vec<Value>, res: Value) {
+        self.memo.as_ref().unwrap().borrow_mut().insert(args, res);
     }
     pub fn get_cache(&self, args: &Vec<Value>) -> Value {
-        self.memo.get(args).unwrap().clone()
+        self.memo
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .get(args)
+            .unwrap()
+            .clone()
     }
 }
 
