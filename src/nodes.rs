@@ -7,6 +7,8 @@ pub enum Node {
     Int(IntNode),
     Double(DoubleNode),
     Boolean(BooleanNode),
+    String(StringNode),
+    List(ListNode),
     Identifier(IdentifierNode),
     UnaryNumber(UnaryNumberNode),
     UnaryBoolean(UnaryBooleanNode),
@@ -39,6 +41,16 @@ pub struct DoubleNode {
 #[derive(Debug, Clone, Copy)]
 pub struct BooleanNode {
     pub value: bool,
+}
+// StringNode
+#[derive(Debug, Clone)]
+pub struct StringNode {
+    pub value: String,
+}
+// ListNode
+#[derive(Debug, Clone)]
+pub struct ListNode {
+    pub elements: Vec<Node>,
 }
 // IdentifierNode
 #[derive(Debug, Clone)]
@@ -100,6 +112,8 @@ pub enum Arithmetic {
     Divide,      // /
     Power,       // ^
     Modulus,     // %
+    TildeDivide, // ~/
+    PowerDivide, // ^/
 }
 // Comparison Enum
 #[derive(Debug, Clone, Copy)]
@@ -114,6 +128,21 @@ pub enum Comparison {
     And,
     Or,
 }
+
+// Assignment Enum
+#[derive(Debug, Clone, Copy)]
+pub enum Assignment {
+    Equals,        // =
+    PlusEq,        // +=
+    MinusEq,       // -=
+    MultiplyEq,    // *=
+    DivideEq,      // /=
+    ModulusEq,     // %/
+    PowerEq,       // ^=
+    TildeDivideEq, // ~/=
+    PowerDivideEq, // ^/=
+}
+
 // BinaryOpNumberNode
 #[derive(Debug, Clone)]
 pub struct BinaryOpNumberNode {
@@ -137,6 +166,12 @@ impl BinaryOpNumberNode {
     }
     pub fn divide(left: Box<Node>, right: Box<Node>) -> Node {
         BinaryOpNumberNode::new(left, right, Arithmetic::Divide)
+    }
+    pub fn tilde_divide(left: Box<Node>, right: Box<Node>) -> Node {
+        BinaryOpNumberNode::new(left, right, Arithmetic::TildeDivide)
+    }
+    pub fn power_divide(left: Box<Node>, right: Box<Node>) -> Node {
+        BinaryOpNumberNode::new(left, right, Arithmetic::PowerDivide)
     }
     pub fn power(left: Box<Node>, right: Box<Node>) -> Node {
         BinaryOpNumberNode::new(left, right, Arithmetic::Power)
@@ -188,11 +223,16 @@ impl BinaryOpBooleanNode {
 pub struct AssignmentNode {
     pub id: String,
     pub value: Box<Node>,
+    pub assign_type: Assignment,
 }
 
 impl AssignmentNode {
-    pub fn new(id: String, value: Box<Node>) -> Node {
-        Node::Assignment(AssignmentNode { id, value })
+    pub fn new(id: String, value: Box<Node>, assign_type: Assignment) -> Node {
+        Node::Assignment(AssignmentNode {
+            id,
+            value,
+            assign_type,
+        })
     }
 }
 

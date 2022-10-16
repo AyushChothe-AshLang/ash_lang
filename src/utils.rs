@@ -1,5 +1,5 @@
 pub mod utils {
-    use crate::tokens::PosRange;
+    use crate::{nodes::Assignment, tokens::PosRange};
 
     use super::super::tokens::Token;
     use std::collections::HashMap;
@@ -21,6 +21,35 @@ pub mod utils {
             Some(keywords.get(id).unwrap().clone())
         } else {
             None
+        }
+    }
+
+    pub fn get_assignment() -> Vec<Token> {
+        vec![
+            Token::Equals(PosRange::empty()),
+            Token::PlusEq(PosRange::empty()),
+            Token::MinusEq(PosRange::empty()),
+            Token::MultiplyEq(PosRange::empty()),
+            Token::DivideEq(PosRange::empty()),
+            Token::PowerEq(PosRange::empty()),
+            Token::ModulusEq(PosRange::empty()),
+            Token::TildeDivideEq(PosRange::empty()),
+            Token::PowerDivideEq(PosRange::empty()),
+        ]
+    }
+
+    pub fn get_assignment_from_token(tkn: &Token) -> Assignment {
+        match tkn {
+            Token::Equals(_) => Assignment::Equals,
+            Token::PlusEq(_) => Assignment::PlusEq,
+            Token::MinusEq(_) => Assignment::MinusEq,
+            Token::MultiplyEq(_) => Assignment::MultiplyEq,
+            Token::DivideEq(_) => Assignment::DivideEq,
+            Token::PowerEq(_) => Assignment::PowerEq,
+            Token::ModulusEq(_) => Assignment::ModulusEq,
+            Token::TildeDivideEq(_) => Assignment::TildeDivideEq,
+            Token::PowerDivideEq(_) => Assignment::PowerDivideEq,
+            _ => panic!("Invalid Assignment"),
         }
     }
     pub fn variant_eq<T>(a: &T, b: &T) -> bool {

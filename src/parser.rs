@@ -1,4 +1,5 @@
 use crate::tokens::PosRange;
+use crate::utils::utils::{get_assignment, get_assignment_from_token};
 
 use super::nodes::*;
 use super::tokens::Token;
@@ -27,9 +28,9 @@ impl Parser {
         self.tokens.iter().nth(self.pos).unwrap()
     }
 
-    fn contains_tkn(&self, vec: Vec<&Token>, curr: &Token) -> bool {
+    fn contains_tkn(&self, vec: Vec<Token>, curr: &Token) -> bool {
         for t in vec.iter() {
-            if variant_eq(*t, curr) {
+            if variant_eq(t, curr) {
                 return true;
             }
         }
@@ -68,10 +69,10 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> Box<Node> {
+    pub fn parse(&mut self) -> Node {
         let mut res = Vec::new();
         while !variant_eq(self.curr(), &Token::EOF(PosRange::empty())) {
-            res.push(*self.primary_statements());
+            res.push(self.primary_statements());
         }
         if !variant_eq(self.curr(), &Token::EOF(PosRange::empty())) {
             panic!("Invalid Syntax {}", self.curr().get_pos());
@@ -79,15 +80,15 @@ impl Parser {
         // Invoke Main
         res.push(FunctionCallNode::new(String::from("main"), Vec::new()));
 
-        Box::new(BlockStatementNode::new(res))
+        BlockStatementNode::new(res)
     }
 
-    fn primary_statements(&mut self) -> Box<Node> {
+    fn primary_statements(&mut self) -> Node {
         match self.curr() {
             Token::Identifier(_, _) => {
                 // Assignment or FunctionCall
                 match self.lookahead() {
-                    Token::Equals(_) => {
+                    _ if self.contains_tkn(get_assignment(), self.lookahead()) => {
                         return self.assignment();
                     }
                     Token::LParan(_) => {
@@ -123,12 +124,12 @@ impl Parser {
         }
     }
 
-    fn control_flow_statement(&mut self) -> Box<Node> {
+    fn control_flow_statement(&mut self) -> Node {
         match self.curr() {
             Token::Identifier(_, _) => {
                 // Assignment or FunctionCall
                 match self.lookahead() {
-                    Token::Equals(_) => {
+                    _ if self.contains_tkn(get_assignment(), self.lookahead()) => {
                         return self.assignment();
                     }
                     Token::LParan(_) => {
@@ -179,20 +180,20 @@ impl Parser {
         }
     }
 
-    fn return_statement(&mut self) -> Box<Node> {
+    fn return_statement(&mut self) -> Node {
         self.eat(&Token::ReturnK(PosRange::empty()));
         let res = self.logical_and_or();
         self.eat(&Token::Semicolon(PosRange::empty()));
-        Box::new(ReturnNode::new(res))
+        ReturnNode::new(Box::new(res))
     }
 
-    fn if_statement(&mut self) -> Box<Node> {
+    fn if_statement(&mut self) -> Node {
         // Parse if condition
         self.eat(&Token::IfK(PosRange::empty()));
         self.eat(&Token::LParan(PosRange::empty()));
-        let condition = self.logical_and_or();
+        let condition = Box::new(self.logical_and_or());
         self.eat(&Token::RParan(PosRange::empty()));
-        let true_block = self.block_statement();
+        let true_block = Box::new(self.block_statement());
 
         // Parse elif statements
         let mut elif_blocks: Vec<Node> = Vec::new();
@@ -202,9 +203,9 @@ impl Parser {
             self.eat(&&Token::ElifK(PosRange::empty()));
             self.eat(&&Token::LParan(PosRange::empty()));
 
-            let condition = self.logical_and_or();
+            let condition = Box::new(self.logical_and_or());
             self.eat(&Token::RParan(PosRange::empty()));
-            let true_block = self.block_statement();
+            let true_block = Box::new(self.block_statement());
             elif_blocks.push(ElifStatementNode::new(condition, true_block));
         }
 
@@ -212,18 +213,13 @@ impl Parser {
         let mut else_block = None;
         if variant_eq(self.curr(), &Token::ElseK(PosRange::empty())) {
             self.eat(&&Token::ElseK(PosRange::empty()));
-            else_block = Some(self.block_statement());
+            else_block = Some(Box::new(self.block_statement()));
         }
-        Box::new(IfStatementNode::new(
-            condition,
-            true_block,
-            elif_blocks,
-            else_block,
-        ))
+        IfStatementNode::new(condition, true_block, elif_blocks, else_block)
     }
 
     // While Loop
-    fn while_loop_statement(&mut self) -> Box<Node> {
+    fn while_loop_statement(&mut self) -> Node {
         self.eat(&Token::WhileK(PosRange::empty()));
 
         self.eat(&Token::LParan(PosRange::empty()));
@@ -232,11 +228,11 @@ impl Parser {
 
         let body = self.block_statement();
 
-        Box::new(WhileLoopNode::new(condition, body))
+        WhileLoopNode::new(Box::new(condition), Box::new(body))
     }
 
     // Parses a Function Declaration Statement
-    fn function_declaration_statement(&mut self, is_cached: bool) -> Box<Node> {
+    fn function_declaration_statement(&mut self, is_cached: bool) -> Node {
         if is_cached {
             self.eat(&Token::CFnK(PosRange::empty()));
         } else {
@@ -265,33 +261,33 @@ impl Parser {
         self.eat(&Token::RParan(PosRange::empty()));
 
         // Parses Function body
-        let body = self.block_statement();
+        let body = Box::new(self.block_statement());
 
         if is_cached {
-            Box::new(FunctionDeclarationNode::new_cfn(id, params, body))
+            FunctionDeclarationNode::new_cfn(id, params, body)
         } else {
-            Box::new(FunctionDeclarationNode::new_fn(id, params, body))
+            FunctionDeclarationNode::new_fn(id, params, body)
         }
     }
 
-    fn block_statement(&mut self) -> Box<Node> {
+    fn block_statement(&mut self) -> Node {
         let mut value = Vec::new();
         self.eat(&Token::LBrace(PosRange::empty()));
         while !variant_eq(self.curr(), &Token::RBrace(PosRange::empty())) {
-            value.push(*self.control_flow_statement());
+            value.push(self.control_flow_statement());
         }
         self.eat(&Token::RBrace(PosRange::empty()));
-        return Box::new(BlockStatementNode::new(value));
+        BlockStatementNode::new(value)
     }
 
-    fn multi_declaration_node(&mut self) -> Box<Node> {
+    fn multi_declaration_node(&mut self) -> Node {
         self.eat(&Token::LetK(PosRange::empty()));
 
         let mut declarations = Vec::new();
 
         let id = self.identifier();
         self.eat(&Token::Equals(PosRange::empty()));
-        let value = self.logical_and_or();
+        let value = Box::new(self.logical_and_or());
 
         declarations.push(DeclarationNode::new(id, value));
 
@@ -301,20 +297,27 @@ impl Parser {
             self.eat(&Token::Comma(PosRange::empty()));
             let id = self.identifier();
             self.eat(&Token::Equals(PosRange::empty()));
-            let value = self.logical_and_or();
+            let value = Box::new(self.logical_and_or());
             declarations.push(DeclarationNode::new(id, value));
         }
 
         self.eat(&Token::Semicolon(PosRange::empty()));
-        Box::new(MultiDeclarationNode::new(declarations))
+        MultiDeclarationNode::new(declarations)
     }
 
-    fn assignment(&mut self) -> Box<Node> {
+    fn assignment(&mut self) -> Node {
         let id = self.identifier();
-        self.eat(&Token::Equals(PosRange::empty()));
-        let value = self.logical_and_or();
+        let assign_type;
+        if self.contains_tkn(get_assignment(), self.curr()) {
+            assign_type = get_assignment_from_token(self.curr());
+            self.next();
+        } else {
+            panic!("{}", self.panic_invalid_syntax("Invalid Assignment"))
+        }
+
+        let value = Box::new(self.logical_and_or());
         self.eat(&Token::Semicolon(PosRange::empty()));
-        Box::new(AssignmentNode::new(id, value))
+        AssignmentNode::new(id, value, assign_type)
     }
 
     fn identifier(&mut self) -> String {
@@ -326,168 +329,196 @@ impl Parser {
         res
     }
 
-    fn function_call_statement(&mut self) -> Box<Node> {
+    fn function_call_statement(&mut self) -> Node {
         let id = self.identifier();
         self.eat(&Token::LParan(PosRange::empty()));
 
         let mut args = Vec::new();
 
         if !variant_eq(self.curr(), &Token::RParan(PosRange::empty())) {
-            args.push(*self.logical_and_or());
+            args.push(self.logical_and_or());
         }
 
         while self.pos < self.tokens.len()
             && !variant_eq(self.curr(), &Token::RParan(PosRange::empty()))
         {
             self.eat(&Token::Comma(PosRange::empty()));
-            args.push(*self.logical_and_or());
+            args.push(self.logical_and_or());
         }
 
         self.eat(&Token::RParan(PosRange::empty()));
-        Box::new(FunctionCallNode::new(id, args))
+        FunctionCallNode::new(id, args)
     }
 
-    /// Parses Logical & |
+    fn list_literal(&mut self) -> Node {
+        let mut elements = Vec::new();
 
-    fn logical_and_or(&mut self) -> Box<Node> {
+        self.eat(&Token::LSquare(PosRange::empty()));
+
+        if !variant_eq(self.curr(), &Token::RSquare(PosRange::empty())) {
+            let elem = self.logical_and_or();
+            elements.push(elem);
+            if variant_eq(self.curr(), &Token::Comma(PosRange::empty())) {
+                while self.pos < self.tokens.len()
+                    && !variant_eq(self.curr(), &Token::RSquare(PosRange::empty()))
+                {
+                    self.eat(&&Token::Comma(PosRange::empty()));
+                    let elem = self.logical_and_or();
+                    elements.push(elem);
+                }
+            }
+        }
+
+        self.eat(&Token::RSquare(PosRange::empty()));
+
+        Node::List(ListNode { elements })
+    }
+
+    // Parses Logical & |
+    fn logical_and_or(&mut self) -> Node {
         let mut res = self.equality();
 
         if self.contains_tkn(
-            vec![
-                &Token::And(PosRange::empty()),
-                &Token::Or(PosRange::empty()),
-            ],
+            vec![Token::And(PosRange::empty()), Token::Or(PosRange::empty())],
             self.curr(),
         ) {
             if variant_eq(self.curr(), &Token::And(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::and(res, self.equality()));
+                res = BinaryOpBooleanNode::and(Box::new(res), Box::new(self.equality()));
             } else if variant_eq(self.curr(), &Token::Or(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::or(res, self.equality()));
+                res = BinaryOpBooleanNode::or(Box::new(res), Box::new(self.equality()));
             }
         }
 
         res
     }
 
-    fn equality(&mut self) -> Box<Node> {
+    fn equality(&mut self) -> Node {
         let mut res = self.comparison();
 
         if self.contains_tkn(
             vec![
-                &Token::DoubleEquals(PosRange::empty()),
-                &Token::NotEquals(PosRange::empty()),
+                Token::DoubleEquals(PosRange::empty()),
+                Token::NotEquals(PosRange::empty()),
             ],
             self.curr(),
         ) {
             if variant_eq(self.curr(), &Token::DoubleEquals(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::deq(res, self.comparison()));
+                res = BinaryOpBooleanNode::deq(Box::new(res), Box::new(self.comparison()));
             } else if variant_eq(self.curr(), &Token::NotEquals(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::neq(res, self.comparison()));
+                res = BinaryOpBooleanNode::neq(Box::new(res), Box::new(self.comparison()));
             }
         }
 
         res
     }
 
-    fn comparison(&mut self) -> Box<Node> {
+    fn comparison(&mut self) -> Node {
         let mut res = self.expression();
 
         if self.contains_tkn(
             vec![
-                &Token::LessThan(PosRange::empty()),
-                &Token::LessThanEq(PosRange::empty()),
-                &Token::GreaterThan(PosRange::empty()),
-                &Token::GreaterThanEq(PosRange::empty()),
+                Token::LessThan(PosRange::empty()),
+                Token::LessThanEq(PosRange::empty()),
+                Token::GreaterThan(PosRange::empty()),
+                Token::GreaterThanEq(PosRange::empty()),
             ],
             self.curr(),
         ) {
             if variant_eq(self.curr(), &Token::LessThan(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::lt(res, self.expression()));
+                res = BinaryOpBooleanNode::lt(Box::new(res), Box::new(self.expression()));
             } else if variant_eq(self.curr(), &Token::LessThanEq(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::lte(res, self.expression()));
+                res = BinaryOpBooleanNode::lte(Box::new(res), Box::new(self.expression()));
             } else if variant_eq(self.curr(), &Token::GreaterThan(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::gt(res, self.expression()));
+                res = BinaryOpBooleanNode::gt(Box::new(res), Box::new(self.expression()));
             } else if variant_eq(self.curr(), &Token::GreaterThanEq(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpBooleanNode::gte(res, self.expression()));
+                res = BinaryOpBooleanNode::gte(Box::new(res), Box::new(self.expression()));
             }
         }
 
         res
     }
 
-    fn expression(&mut self) -> Box<Node> {
+    fn expression(&mut self) -> Node {
         let mut res = self.factor();
 
         while self.pos < self.tokens.len()
             && self.contains_tkn(
                 vec![
-                    &Token::Plus(PosRange::empty()),
-                    &Token::Minus(PosRange::empty()),
+                    Token::Plus(PosRange::empty()),
+                    Token::Minus(PosRange::empty()),
                 ],
                 self.curr(),
             )
         {
             if variant_eq(self.curr(), &Token::Plus(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::plus(res, self.factor()));
+                res = BinaryOpNumberNode::plus(Box::new(res), Box::new(self.factor()));
             } else if variant_eq(self.curr(), &Token::Minus(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::minus(res, self.factor()));
+                res = BinaryOpNumberNode::minus(Box::new(res), Box::new(self.factor()));
             }
         }
 
         res
     }
-    fn factor(&mut self) -> Box<Node> {
+    fn factor(&mut self) -> Node {
         let mut res = self.power();
 
         while self.pos < self.tokens.len()
             && self.contains_tkn(
                 vec![
-                    &Token::Multiply(PosRange::empty()),
-                    &Token::Divide(PosRange::empty()),
-                    &Token::Modulus(PosRange::empty()),
+                    Token::Multiply(PosRange::empty()),
+                    Token::Divide(PosRange::empty()),
+                    Token::TildeDivide(PosRange::empty()),
+                    Token::PowerDivide(PosRange::empty()),
+                    Token::Modulus(PosRange::empty()),
                 ],
                 self.curr(),
             )
         {
             if variant_eq(self.curr(), &Token::Multiply(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::multiply(res, self.power()));
+                res = BinaryOpNumberNode::multiply(Box::new(res), Box::new(self.power()));
             } else if variant_eq(self.curr(), &Token::Divide(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::divide(res, self.power()));
+                res = BinaryOpNumberNode::divide(Box::new(res), Box::new(self.power()));
+            } else if variant_eq(self.curr(), &Token::TildeDivide(PosRange::empty())) {
+                self.next();
+                res = BinaryOpNumberNode::tilde_divide(Box::new(res), Box::new(self.power()));
+            } else if variant_eq(self.curr(), &Token::PowerDivide(PosRange::empty())) {
+                self.next();
+                res = BinaryOpNumberNode::power_divide(Box::new(res), Box::new(self.power()));
             } else if variant_eq(self.curr(), &Token::Modulus(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::modulus(res, self.power()));
+                res = BinaryOpNumberNode::modulus(Box::new(res), Box::new(self.power()));
             }
         }
 
         res
     }
-    fn power(&mut self) -> Box<Node> {
+    fn power(&mut self) -> Node {
         let mut res = self.atom();
 
         while self.pos < self.tokens.len()
-            && self.contains_tkn(vec![&Token::Power(PosRange::empty())], self.curr())
+            && self.contains_tkn(vec![Token::Power(PosRange::empty())], self.curr())
         {
             if variant_eq(self.curr(), &Token::Power(PosRange::empty())) {
                 self.next();
-                res = Box::new(BinaryOpNumberNode::power(res, self.atom()));
+                res = BinaryOpNumberNode::power(Box::new(res), Box::new(self.atom()));
             }
         }
 
         res
     }
-    fn atom(&mut self) -> Box<Node> {
+    fn atom(&mut self) -> Node {
         match self.curr() {
             Token::LParan(_) => {
                 self.eat(&Token::LParan(PosRange::empty()));
@@ -495,47 +526,56 @@ impl Parser {
                 self.eat(&Token::RParan(PosRange::empty()));
                 res
             }
+            Token::LSquare(_) => self.list_literal(),
             Token::Identifier(id, _) => {
                 let res;
                 if variant_eq(self.lookahead(), &Token::LParan(PosRange::empty())) {
                     res = self.function_call_statement();
                 } else {
-                    res = Box::new(Node::Identifier(IdentifierNode { value: id.clone() }));
+                    res = Node::Identifier(IdentifierNode { value: id.clone() });
                     self.next();
                 }
                 res
             }
             Token::Plus(_) => {
                 self.next();
-                let res = Box::new(UnaryNumberNode::plus(self.atom()));
+                let res = UnaryNumberNode::plus(Box::new(self.atom()));
                 res
             }
             Token::Minus(_) => {
                 self.next();
-                let res = Box::new(UnaryNumberNode::minus(self.atom()));
+                let res = UnaryNumberNode::minus(Box::new(self.atom()));
                 res
             }
             Token::Int(num, _) => {
-                let res = Box::new(Node::Int(IntNode {
+                let res = Node::Int(IntNode {
                     value: num.to_owned(),
-                }));
+                });
                 self.next();
                 res
             }
             Token::Double(num, _) => {
-                let res = Box::new(Node::Double(DoubleNode {
+                let res = Node::Double(DoubleNode {
                     value: num.to_owned(),
-                }));
+                });
                 self.next();
                 res
             }
             Token::Boolean(_bool, _) => {
-                let res = Box::new(Node::Boolean(BooleanNode {
+                let res = Node::Boolean(BooleanNode {
                     value: _bool.to_owned(),
-                }));
+                });
                 self.next();
                 res
             }
+            Token::String(_str, _) => {
+                let res = Node::String(StringNode {
+                    value: _str.to_owned(),
+                });
+                self.next();
+                res
+            }
+
             _ => panic!(
                 "Invalid Syntax {}: {}",
                 self.curr().get_pos(),

@@ -12,15 +12,18 @@ use super::values::*;
 type BuiltInFn = fn(Vec<Value>) -> Value;
 
 pub struct Interpreter {
-    ast: Box<Node>,
+    ast: Node,
     builtin: Rc<HashMap<String, BuiltInFn>>,
 }
 
 impl Interpreter {
-    pub fn new(ast: Box<Node>) -> Self {
+    pub fn new(ast: Node) -> Self {
         let builtin: HashMap<String, BuiltInFn> = HashMap::from([
             (String::from("print"), ash_print as BuiltInFn),
             (String::from("println"), ash_println as BuiltInFn),
+            (String::from("input"), ash_input as BuiltInFn),
+            (String::from("int"), ash_int as BuiltInFn),
+            (String::from("double"), ash_double as BuiltInFn),
             (String::from("min"), ash_min as BuiltInFn),
             (String::from("max"), ash_max as BuiltInFn),
         ]);
@@ -40,6 +43,8 @@ impl Interpreter {
             Node::Int(_node) => self.walk_int_node(_node),
             Node::Double(_node) => self.walk_double_node(_node),
             Node::Boolean(_node) => self.walk_boolean_node(_node),
+            Node::String(_node) => self.walk_string_node(_node),
+            Node::List(_node) => self.walk_list_node(_node, scope),
             Node::BinaryOpNumber(_node) => self.walk_binary_op_number_node(_node, scope),
             Node::BinaryOpBoolean(_node) => self.walk_binary_op_boolean_node(_node, scope),
             Node::UnaryNumber(_node) => self.walk_unary_number_node(_node, scope),
@@ -68,6 +73,20 @@ impl Interpreter {
 
     fn walk_boolean_node(&self, node: &BooleanNode) -> Value {
         Value::BooleanValue(node.value)
+    }
+
+    fn walk_string_node(&self, node: &StringNode) -> Value {
+        Value::StringValue(node.value.to_owned())
+    }
+
+    fn walk_list_node(&mut self, node: &ListNode, scope: &mut ScopePtr) -> Value {
+        Value::ListValue(
+            node.elements
+                .clone()
+                .iter_mut()
+                .map(|e| self.walk(e, scope))
+                .collect(),
+        )
     }
 
     fn walk_return_node(&mut self, node: &mut ReturnNode, scope: &mut ScopePtr) -> Value {
@@ -166,14 +185,7 @@ impl Interpreter {
     ) -> Value {
         let left = self.walk(&mut node.left, scope);
         let right = self.walk(&mut node.right, scope);
-        match node.op {
-            Arithmetic::Addition => self.perform_op(left, right, |res, x| res + x),
-            Arithmetic::Subtraction => self.perform_op(left, right, |res, x| res - x),
-            Arithmetic::Multiply => self.perform_op(left, right, |res, x| res * x),
-            Arithmetic::Divide => self.perform_op(left, right, |res, x| res / x),
-            Arithmetic::Power => self.perform_op(left, right, |res, x| res.powf(x)),
-            Arithmetic::Modulus => self.perform_op(left, right, |res, x| res % x),
-        }
+        self.perform_op(left, right, node.op)
     }
 
     fn and(&self, left: Value, right: Value) -> Value {
@@ -196,42 +208,116 @@ impl Interpreter {
         }
     }
 
-    fn perform_op(&self, left: Value, right: Value, op: fn(f64, f64) -> f64) -> Value {
-        let mut res;
-        // i+i
-        let is_left_int = match left {
-            Value::IntValue(i) => {
-                res = i as f64;
-                true
-            }
-            Value::DoubleValue(d) => {
-                res = d.0;
-                false
-            }
-            _ => panic!("Invalid Type"),
-        };
-        let is_right_int = match right {
-            Value::IntValue(i) => {
-                res = op(res, i as f64);
-                true
-            }
-            Value::DoubleValue(d) => {
-                res = op(res, d.0);
-                false
-            }
-            _ => panic!("Invalid Type"),
-        };
-        if is_left_int && is_right_int && res.fract() == 0.0 {
-            Value::IntValue(res as i64)
-        } else {
-            Value::DoubleValue(OrderedFloat(res))
+    fn perform_op(&self, left: Value, right: Value, op: Arithmetic) -> Value {
+        match left {
+            Value::IntValue(l) => match right {
+                Value::IntValue(r) => match op {
+                    Arithmetic::Addition => Value::IntValue(l + r),
+                    Arithmetic::Subtraction => Value::IntValue(l - r),
+                    Arithmetic::Multiply => Value::IntValue(l * r),
+                    Arithmetic::Power => Value::IntValue(l.pow(r as u32)),
+                    Arithmetic::Modulus => Value::IntValue(l % r),
+                    Arithmetic::Divide => {
+                        let res = l as f64 / r as f64;
+                        if res.fract() == 0.0 {
+                            Value::IntValue(res as i64)
+                        } else {
+                            Value::DoubleValue(OrderedFloat(res))
+                        }
+                    }
+                    Arithmetic::TildeDivide => {
+                        Value::IntValue((l as f64 / r as f64).floor() as i64)
+                    }
+                    Arithmetic::PowerDivide => Value::IntValue((l as f64 / r as f64).ceil() as i64),
+                },
+                Value::DoubleValue(r) => match op {
+                    Arithmetic::Addition => Value::DoubleValue(OrderedFloat(l as f64 + r.0)),
+                    Arithmetic::Subtraction => Value::DoubleValue(OrderedFloat(l as f64 - r.0)),
+                    Arithmetic::Multiply => Value::DoubleValue(OrderedFloat(l as f64 * r.0)),
+                    Arithmetic::Divide => Value::DoubleValue(OrderedFloat(l as f64 / r.0)),
+                    Arithmetic::Power => Value::DoubleValue(OrderedFloat((l as f64).powf(r.0))),
+                    Arithmetic::Modulus => Value::DoubleValue(OrderedFloat(l as f64 % r.0)),
+                    Arithmetic::TildeDivide => Value::IntValue((l as f64 / r.0).floor() as i64),
+                    Arithmetic::PowerDivide => Value::IntValue((l as f64 / r.0).ceil() as i64),
+                },
+                _ => panic!("Invalid Operands"),
+            },
+            Value::DoubleValue(l) => match right {
+                Value::IntValue(r) => match op {
+                    Arithmetic::Addition => Value::DoubleValue(OrderedFloat(l.0 + r as f64)),
+                    Arithmetic::Subtraction => Value::DoubleValue(OrderedFloat(l.0 - r as f64)),
+                    Arithmetic::Multiply => Value::DoubleValue(OrderedFloat(l.0 * r as f64)),
+                    Arithmetic::Divide => Value::DoubleValue(OrderedFloat(l.0 / r as f64)),
+                    Arithmetic::Power => Value::DoubleValue(OrderedFloat((l.0).powf(r as f64))),
+                    Arithmetic::Modulus => Value::DoubleValue(OrderedFloat(l.0 % r as f64)),
+                    Arithmetic::TildeDivide => Value::IntValue((l.0 / r as f64).floor() as i64),
+                    Arithmetic::PowerDivide => Value::IntValue((l.0 / r as f64).ceil() as i64),
+                },
+                Value::DoubleValue(r) => match op {
+                    Arithmetic::Addition => Value::DoubleValue(OrderedFloat(l.0 + r.0)),
+                    Arithmetic::Subtraction => Value::DoubleValue(OrderedFloat(l.0 - r.0)),
+                    Arithmetic::Multiply => Value::DoubleValue(OrderedFloat(l.0 * r.0)),
+                    Arithmetic::Divide => Value::DoubleValue(OrderedFloat(l.0 / r.0)),
+                    Arithmetic::Power => Value::DoubleValue(OrderedFloat((l.0).powf(r.0))),
+                    Arithmetic::Modulus => Value::DoubleValue(OrderedFloat(l.0 % r.0)),
+                    Arithmetic::TildeDivide => Value::IntValue((l / r.0).floor() as i64),
+                    Arithmetic::PowerDivide => Value::IntValue((l / r.0).ceil() as i64),
+                },
+                _ => panic!("Invalid Operands"),
+            },
+            Value::StringValue(l) => match right {
+                Value::IntValue(r) => match op {
+                    Arithmetic::Multiply => {
+                        let mut res = String::new();
+                        for _ in 0..r {
+                            res.push_str(l.as_str());
+                        }
+                        Value::StringValue(res)
+                    }
+                    _ => panic!("Invalid Operands"),
+                },
+                Value::StringValue(r) => match op {
+                    Arithmetic::Addition => Value::StringValue(l + r.as_str()),
+                    _ => panic!("Invalid Operands"),
+                },
+
+                _ => panic!("Invalid Operands"),
+            },
+            Value::ListValue(l) => match right {
+                Value::ListValue(r) => match op {
+                    Arithmetic::Addition => Value::ListValue([l, r].concat()),
+                    _ => panic!("Invalid Operands"),
+                },
+                _ => panic!("Invalid Operands"),
+            },
+            _ => panic!("Invalid Operands"),
         }
     }
 
     fn walk_assignment_node(&mut self, node: &mut AssignmentNode, scope: &mut ScopePtr) -> Value {
         let id = &node.id;
-        let value = self.walk(&mut node.value, scope);
-        scope.borrow_mut().set_symbol(id, value);
+        let left = self.walk(
+            &mut Node::Identifier(IdentifierNode {
+                value: id.to_owned(),
+            }),
+            scope,
+        );
+        let right = self.walk(&mut node.value, scope);
+
+        scope.borrow_mut().set_symbol(
+            id,
+            match node.assign_type {
+                Assignment::Equals => right,
+                Assignment::PlusEq => self.perform_op(left, right, Arithmetic::Addition),
+                Assignment::MinusEq => self.perform_op(left, right, Arithmetic::Subtraction),
+                Assignment::MultiplyEq => self.perform_op(left, right, Arithmetic::Multiply),
+                Assignment::DivideEq => self.perform_op(left, right, Arithmetic::Divide),
+                Assignment::ModulusEq => self.perform_op(left, right, Arithmetic::Modulus),
+                Assignment::PowerEq => self.perform_op(left, right, Arithmetic::Power),
+                Assignment::TildeDivideEq => self.perform_op(left, right, Arithmetic::TildeDivide),
+                Assignment::PowerDivideEq => self.perform_op(left, right, Arithmetic::PowerDivide),
+            },
+        );
         Value::None
     }
 
