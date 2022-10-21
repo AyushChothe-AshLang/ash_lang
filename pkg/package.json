@@ -1,0 +1,12 @@
+{
+  "name": "ash_lang",
+  "version": "0.1.0",
+  "files": [
+    "ash_lang_bg.wasm",
+    "ash_lang.js",
+    "ash_lang.d.ts"
+  ],
+  "module": "ash_lang.js",
+  "types": "ash_lang.d.ts",
+  "sideEffects": false
+}

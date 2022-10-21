@@ -24,6 +24,7 @@ impl Interpreter {
             (String::from("input"), ash_input as BuiltInFn),
             (String::from("int"), ash_int as BuiltInFn),
             (String::from("double"), ash_double as BuiltInFn),
+            (String::from("str"), ash_str as BuiltInFn),
             (String::from("min"), ash_min as BuiltInFn),
             (String::from("max"), ash_max as BuiltInFn),
         ]);
@@ -199,9 +200,29 @@ impl Interpreter {
     }
 
     fn or(&self, left: Value, right: Value) -> Value {
-        match left {
-            Value::BooleanValue(_left) => match right {
-                Value::BooleanValue(_right) => Value::BooleanValue(_left || _right),
+        match &left {
+            Value::BooleanValue(_left) => match &right {
+                Value::BooleanValue(_right) => Value::BooleanValue(*_left || *_right),
+                _ => panic!("Invalid Operands"),
+            },
+            Value::StringValue(_left) => match &right {
+                Value::StringValue(_right) => {
+                    if _left == "" {
+                        right
+                    } else {
+                        left
+                    }
+                }
+                _ => panic!("Invalid Operands"),
+            },
+            Value::ListValue(_left) => match &right {
+                Value::ListValue(_right) => {
+                    if _left.len() == 0 {
+                        right
+                    } else {
+                        left
+                    }
+                }
                 _ => panic!("Invalid Operands"),
             },
             _ => panic!("Invalid Operands"),

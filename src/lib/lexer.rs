@@ -146,8 +146,25 @@ impl Lexer {
         // Eat '"'
         self.next();
 
+        let mut escape = false;
         while self.pos < self.code.len() && self.curr() != '"' {
-            id.push(self.curr());
+            if self.curr() == '\\' {
+                escape = true;
+                self.next();
+            }
+
+            if escape {
+                match self.curr() {
+                    'n' => id.push('\n'),
+                    't' => id.push('\t'),
+                    'r' => id.push('\r'),
+                    _ => id.push(self.curr()),
+                }
+                escape = false
+            } else {
+                id.push(self.curr());
+            }
+
             self.next();
         }
 
@@ -314,6 +331,7 @@ impl Lexer {
                     tokens.push(Token::Semicolon(PosRange::new(self.get_pos(), None)));
                     self.next()
                 }
+                // '\\' => self.next(),
                 _ => panic!("Invalid Token [{}:{}]:'{}'", self.line, self.col, c),
             }
         }

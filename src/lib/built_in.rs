@@ -40,6 +40,17 @@ pub fn ash_input(args: Vec<Value>) -> Value {
     Value::StringValue(buf.trim().to_owned())
 }
 
+pub fn ash_str(args: Vec<Value>) -> Value {
+    let val = args.first().expect("Expected 1 argument 0 found");
+    Value::StringValue(match val {
+        Value::IntValue(_i) => _i.to_string(),
+        Value::DoubleValue(_d) => _d.0.to_string(),
+        Value::StringValue(_s) => _s.to_string(),
+        Value::BooleanValue(_b) => _b.to_string(),
+        _ => panic!("Invalid Type Conversion"),
+    })
+}
+
 pub fn ash_int(args: Vec<Value>) -> Value {
     let val = args.first().expect("Expected 1 argument 0 found");
     Value::IntValue(match val {

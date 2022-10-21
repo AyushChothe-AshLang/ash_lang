@@ -1,23 +1,14 @@
-pub mod built_in;
-pub mod interpreter;
-pub mod lexer;
-pub mod nodes;
-pub mod parser;
-pub mod scope;
-pub mod tokens;
-pub mod utils;
-pub mod values;
-
 use std::fs;
 
-use interpreter::Interpreter;
-use lexer::Lexer;
-use parser::Parser;
+use ash_lang::interpreter::Interpreter;
+use ash_lang::lexer::Lexer;
+use ash_lang::parser::Parser;
 fn main() {
-    // let code = String::from();
+    // let code = String::from("");
     // let code = fs::read_to_string("/mnt/d/RustProjects/math_eval/src/code.ash")
     let code =
         fs::read_to_string("./src/code.ash").expect("Should have been able to read the file");
+    // println!("{}", code);
     let mut lexer = Lexer::new(code);
     let tokens = lexer.tokenize();
     // println!("{:?}", tokens);
@@ -28,5 +19,5 @@ fn main() {
 
     let mut interpreter = Interpreter::new(ast);
 
-    interpreter.eval();
+    println!("{}", interpreter.eval());
 }
