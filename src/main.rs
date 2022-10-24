@@ -19,5 +19,5 @@ fn main() {
 
     let mut interpreter = Interpreter::new(ast);
 
-    println!("{}", interpreter.eval());
+    interpreter.eval();
 }

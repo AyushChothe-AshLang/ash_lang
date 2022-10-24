@@ -11,15 +11,14 @@
   <button id="run">Run</button>
   <script type="module">
     import init, { run } from "./pkg/ash_lang.js";
-    await init();
+    init();
 
     let run_btn = document.getElementById("run");
     run_btn.addEventListener("click", () => {
-      let code = String.raw`${document.getElementById("code").value}`
-        .replace("\\n", "\n")
-        .replace("\\r", "\r")
-        .replace("\\t", "\t");
-      console.log(run(code));
+      let code = document.getElementById("code").value;
+      run(code).then((res) => {
+        console.log(res);
+      });
     });
   </script>
 </body>

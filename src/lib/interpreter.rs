@@ -25,8 +25,13 @@ impl Interpreter {
             (String::from("int"), ash_int as BuiltInFn),
             (String::from("double"), ash_double as BuiltInFn),
             (String::from("str"), ash_str as BuiltInFn),
+            (String::from("list"), ash_list as BuiltInFn),
             (String::from("min"), ash_min as BuiltInFn),
             (String::from("max"), ash_max as BuiltInFn),
+            (String::from("get"), ash_get as BuiltInFn),
+            (String::from("set"), ash_set as BuiltInFn),
+            (String::from("len"), ash_len as BuiltInFn),
+            (String::from("pop"), ash_pop as BuiltInFn),
         ]);
         Interpreter {
             ast,
@@ -305,6 +310,16 @@ impl Interpreter {
                 _ => panic!("Invalid Operands"),
             },
             Value::ListValue(l) => match right {
+                Value::IntValue(i) => match op {
+                    Arithmetic::Multiply => {
+                        let mut res = vec![];
+                        for _ in 0..i {
+                            res.extend(l.clone());
+                        }
+                        Value::ListValue(res)
+                    }
+                    _ => panic!("Invalid Operands"),
+                },
                 Value::ListValue(r) => match op {
                     Arithmetic::Addition => Value::ListValue([l, r].concat()),
                     _ => panic!("Invalid Operands"),

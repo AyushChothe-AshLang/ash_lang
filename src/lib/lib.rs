@@ -14,7 +14,7 @@ use parser::Parser;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn run(code: String) -> String {
+pub async fn run(code: String) -> String {
     let mut lexer = Lexer::new(code);
     let tokens = lexer.tokenize();
     // println!("{:?}", tokens);
