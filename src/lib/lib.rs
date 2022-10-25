@@ -20,7 +20,7 @@ pub async fn run(code: String) -> Result<String, String> {
     // println!("{:?}", tokens);
 
     let mut parser = Parser::new(tokens);
-    let ast = parser.parse();
+    let ast = parser.parse()?;
     // print!("{:?}", ast);
 
     let mut interpreter = Interpreter::new(ast);

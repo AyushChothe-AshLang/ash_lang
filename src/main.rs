@@ -15,7 +15,7 @@ fn main() -> Result<(), String> {
     // println!("{:?}", tokens);
 
     let mut parser = Parser::new(tokens);
-    let ast = parser.parse();
+    let ast = parser.parse()?;
     // print!("{:?}", ast);
 
     let mut interpreter = Interpreter::new(ast);
