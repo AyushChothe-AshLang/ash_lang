@@ -14,9 +14,9 @@ use parser::Parser;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub async fn run(code: String) -> String {
+pub async fn run(code: String) -> Result<String, String> {
     let mut lexer = Lexer::new(code);
-    let tokens = lexer.tokenize();
+    let tokens = lexer.tokenize()?;
     // println!("{:?}", tokens);
 
     let mut parser = Parser::new(tokens);
@@ -25,5 +25,5 @@ pub async fn run(code: String) -> String {
 
     let mut interpreter = Interpreter::new(ast);
 
-    format!("{}", interpreter.eval())
+    Ok(format!("{}", interpreter.eval()))
 }

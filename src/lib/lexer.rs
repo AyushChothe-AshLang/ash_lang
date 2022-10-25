@@ -4,6 +4,10 @@ use crate::{
 };
 
 use super::tokens::Token;
+
+type LexResult = Result<Vec<Token>, String>;
+type TokenResult = Result<Token, String>;
+
 // Lexer
 pub struct Lexer {
     code: String,
@@ -35,16 +39,16 @@ impl Lexer {
         first_token: &mut Token,
         second_token: &mut Token,
         chars: [char; 2],
-    ) -> Token {
+    ) -> TokenResult {
         let from = self.get_pos();
         let mut tkn = first_token.set_pos(PosRange::new(from.clone(), None));
-        self.next();
+        self.next()?;
         if self.pos < self.code.len() && self.curr() == chars[1] {
             let to = self.get_pos();
             tkn = second_token.set_pos(PosRange::new(from, Some(to)));
-            self.next();
+            self.next()?;
         }
-        tkn
+        Ok(tkn)
     }
     fn add_triple_char_token(
         &mut self,
@@ -52,31 +56,32 @@ impl Lexer {
         second_token: &mut Token,
         third_token: &mut Token,
         chars: [char; 3],
-    ) -> Token {
+    ) -> TokenResult {
         let from = self.get_pos();
         let mut tkn = first_token.set_pos(PosRange::new(from.clone(), None));
-        self.next();
+        self.next()?;
 
         if self.pos < self.code.len() && self.curr() == chars[1] {
             let to = self.get_pos();
             tkn = second_token.set_pos(PosRange::new(from.clone(), Some(to)));
-            self.next();
+            self.next()?;
 
             if self.pos < self.code.len() && self.curr() == chars[2] {
                 let to = self.get_pos();
                 tkn = third_token.set_pos(PosRange::new(from, Some(to)));
-                self.next();
+                self.next()?;
             }
         }
-        tkn
+        Ok(tkn)
     }
 
-    fn next(&mut self) -> () {
+    fn next(&mut self) -> Result<(), String> {
         if self.pos < self.code.len() {
             self.pos += 1;
             self.col += 1;
+            Ok(())
         } else {
-            panic!("Reached EOF")
+            Err("Reached EOF".to_string())
         }
     }
     fn lookahed(&self) -> char {
@@ -87,7 +92,7 @@ impl Lexer {
         }
     }
 
-    fn parse_number(&mut self) -> Token {
+    fn parse_number(&mut self) -> TokenResult {
         let mut num = String::from("");
         let from = self.get_pos();
 
@@ -98,7 +103,7 @@ impl Lexer {
             }
             if dots < 2 {
                 num.push(self.curr());
-                self.next();
+                self.next()?;
             } else {
                 break;
             }
@@ -106,13 +111,19 @@ impl Lexer {
         let to = self.get_pos();
 
         if dots != 0 {
-            Token::Double(num.parse::<f64>().unwrap(), PosRange::new(from, Some(to)))
+            Ok(Token::Double(
+                num.parse::<f64>().unwrap(),
+                PosRange::new(from, Some(to)),
+            ))
         } else {
-            Token::Int(num.parse::<i64>().unwrap(), PosRange::new(from, Some(to)))
+            Ok(Token::Int(
+                num.parse::<i64>().unwrap(),
+                PosRange::new(from, Some(to)),
+            ))
         }
     }
 
-    fn parse_identifier(&mut self) -> Token {
+    fn parse_identifier(&mut self) -> TokenResult {
         let mut id = String::from("");
         let from = self.get_pos();
         while self.pos < self.code.len()
@@ -120,37 +131,38 @@ impl Lexer {
                 || ('0'..='9').contains(&self.curr().to_ascii_lowercase()))
         {
             id.push(self.curr());
-            self.next();
+            self.next()?;
         }
         let to = self.get_pos();
-        if let Some(keyord) = is_keyword(id.as_str(), PosRange::new(from.clone(), Some(to.clone())))
+        if let Some(keyword) =
+            is_keyword(id.as_str(), PosRange::new(from.clone(), Some(to.clone())))
         {
-            keyord
+            Ok(keyword)
         } else if id == "true".to_string() || id == "false".to_string() {
-            Token::Boolean(
+            Ok(Token::Boolean(
                 if id == "true".to_string() {
                     true
                 } else {
                     false
                 },
                 PosRange::new(from, Some(to)),
-            )
+            ))
         } else {
-            Token::Identifier(id, PosRange::new(from, Some(to)))
+            Ok(Token::Identifier(id, PosRange::new(from, Some(to))))
         }
     }
-    fn parse_string(&mut self) -> Token {
+    fn parse_string(&mut self) -> TokenResult {
         let mut id = String::from("");
         let from = self.get_pos();
 
         // Eat '"'
-        self.next();
+        self.next()?;
 
         let mut escape = false;
         while self.pos < self.code.len() && self.curr() != '"' {
             if self.curr() == '\\' {
                 escape = true;
-                self.next();
+                self.next()?;
             }
 
             if escape {
@@ -165,18 +177,18 @@ impl Lexer {
                 id.push(self.curr());
             }
 
-            self.next();
+            self.next()?;
         }
 
         // Eat '"'
-        self.next();
+        self.next()?;
 
         let to = self.get_pos();
 
-        Token::String(id, PosRange::new(from, Some(to)))
+        Ok(Token::String(id, PosRange::new(from, Some(to))))
     }
 
-    pub fn tokenize(&mut self) -> Vec<Token> {
+    pub fn tokenize(&mut self) -> LexResult {
         let mut tokens: Vec<Token> = vec![];
 
         while self.pos < self.code.len() {
@@ -187,45 +199,45 @@ impl Lexer {
                         self.line += 1;
                         self.col = 0;
                     }
-                    self.next()
+                    self.next()?
                 }
-                '"' => tokens.push(self.parse_string()),
-                '0'..='9' | '.' => tokens.push(self.parse_number()),
-                _ if c.is_ascii_alphabetic() => tokens.push(self.parse_identifier()),
+                '"' => tokens.push(self.parse_string()?),
+                '0'..='9' | '.' => tokens.push(self.parse_number()?),
+                _ if c.is_ascii_alphabetic() => tokens.push(self.parse_identifier()?),
                 '+' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Plus(PosRange::empty()),
                         &mut Token::PlusEq(PosRange::empty()),
                         ['+', '='],
-                    ));
+                    )?);
                 }
                 '-' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Minus(PosRange::empty()),
                         &mut Token::MinusEq(PosRange::empty()),
                         ['-', '='],
-                    ));
+                    )?);
                 }
                 '*' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Multiply(PosRange::empty()),
                         &mut Token::MultiplyEq(PosRange::empty()),
                         ['*', '='],
-                    ));
+                    )?);
                 }
                 '/' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Divide(PosRange::empty()),
                         &mut Token::DivideEq(PosRange::empty()),
                         ['/', '='],
-                    ));
+                    )?);
                 }
                 '%' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Modulus(PosRange::empty()),
                         &mut Token::ModulusEq(PosRange::empty()),
                         ['%', '='],
-                    ));
+                    )?);
                 }
                 '^' => {
                     if self.lookahed() == '=' {
@@ -233,14 +245,14 @@ impl Lexer {
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerEq(PosRange::empty()),
                             ['^', '='],
-                        ));
+                        )?);
                     } else {
                         tokens.push(self.add_triple_char_token(
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerDivide(PosRange::empty()),
                             &mut &mut Token::PowerDivideEq(PosRange::empty()),
                             ['^', '/', '='],
-                        ));
+                        )?);
                     }
                 }
                 '~' => {
@@ -249,14 +261,14 @@ impl Lexer {
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerEq(PosRange::empty()),
                             ['~', '='],
-                        ));
+                        )?);
                     } else {
                         tokens.push(self.add_triple_char_token(
                             &mut Token::Tilde(PosRange::empty()),
                             &mut Token::TildeDivide(PosRange::empty()),
                             &mut &mut Token::TildeDivideEq(PosRange::empty()),
                             ['~', '/', '='],
-                        ));
+                        )?);
                     }
                 }
                 '=' => {
@@ -264,81 +276,85 @@ impl Lexer {
                         &mut Token::Equals(PosRange::empty()),
                         &mut Token::DoubleEquals(PosRange::empty()),
                         ['=', '='],
-                    ));
+                    )?);
                 }
                 '!' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::Not(PosRange::empty()),
                         &mut Token::NotEquals(PosRange::empty()),
                         ['!', '='],
-                    ));
+                    )?);
                 }
                 '<' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::LessThan(PosRange::empty()),
                         &mut Token::LessThanEq(PosRange::empty()),
                         ['<', '='],
-                    ));
+                    )?);
                 }
                 '>' => {
                     tokens.push(self.add_double_char_token(
                         &mut Token::GreaterThan(PosRange::empty()),
                         &mut Token::GreaterThanEq(PosRange::empty()),
                         ['>', '='],
-                    ));
+                    )?);
                 }
                 '&' => {
                     tokens.push(Token::And(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 '|' => {
                     tokens.push(Token::Or(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 '(' => {
                     tokens.push(Token::LParan(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 ')' => {
                     tokens.push(Token::RParan(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 '{' => {
                     tokens.push(Token::LBrace(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 '}' => {
                     tokens.push(Token::RBrace(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 '[' => {
                     tokens.push(Token::LSquare(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 ']' => {
                     tokens.push(Token::RSquare(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 ',' => {
                     tokens.push(Token::Comma(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 ':' => {
                     tokens.push(Token::Colon(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
                 ';' => {
                     tokens.push(Token::Semicolon(PosRange::new(self.get_pos(), None)));
-                    self.next()
+                    self.next()?
                 }
-                // '\\' => self.next(),
-                _ => panic!("Invalid Token [{}:{}]:'{}'", self.line, self.col, c),
+                _ => {
+                    return Err(format!(
+                        "Invalid Token [{}:{}]:'{}'",
+                        self.line, self.col, c
+                    ))
+                }
             }
         }
         // Add EOF
         tokens.push(Token::EOF(PosRange::new(self.get_pos(), None)));
         // Return tokens
-        tokens
+        Ok(tokens)
     }
 }
 #[cfg(test)]
@@ -350,7 +366,7 @@ mod tests {
     #[test]
     fn empty_program() {
         let mut lexer = Lexer::new("".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![Token::EOF(PosRange::new(Position::from(1, 1), None))]
@@ -360,7 +376,7 @@ mod tests {
     #[test]
     fn operators() {
         let mut lexer = Lexer::new("+-*/^%".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -378,7 +394,7 @@ mod tests {
     #[test]
     fn params() {
         let mut lexer = Lexer::new("()".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -392,7 +408,7 @@ mod tests {
     #[test]
     fn braces() {
         let mut lexer = Lexer::new("{}".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -406,7 +422,7 @@ mod tests {
     #[test]
     fn symbols() {
         let mut lexer = Lexer::new("!,:;".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -422,7 +438,7 @@ mod tests {
     #[test]
     fn assignment() {
         let mut lexer = Lexer::new("= += -= *= /= %= ^= ~/= ^/=".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -467,7 +483,7 @@ mod tests {
     #[test]
     fn comparison() {
         let mut lexer = Lexer::new("!= == < > <= >=".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -485,7 +501,7 @@ mod tests {
     #[test]
     fn if_elif_else() {
         let mut lexer = Lexer::new("if elif else".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -500,7 +516,7 @@ mod tests {
     #[test]
     fn while_break_continue() {
         let mut lexer = Lexer::new("while break continue".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -515,7 +531,7 @@ mod tests {
     #[test]
     fn fn_return() {
         let mut lexer = Lexer::new("fn return".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
@@ -529,7 +545,7 @@ mod tests {
     #[test]
     fn integer() {
         let mut lexer = Lexer::new("1".to_string());
-        let tokens = lexer.tokenize();
+        let tokens = lexer.tokenize().unwrap();
         assert_eq!(
             tokens,
             vec![
