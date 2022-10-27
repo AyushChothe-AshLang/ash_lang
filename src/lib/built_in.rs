@@ -52,7 +52,7 @@ pub fn ash_input(args: Vec<Value>) -> Value {
     let mut buf = String::new();
     io::stdin()
         .read_line(&mut buf)
-        .expect("Error occured while taking input");
+        .expect("Error occurred while taking input");
     Value::StringValue(buf.trim().to_owned())
 }
 
@@ -143,7 +143,7 @@ pub fn ash_get(args: Vec<Value>) -> Value {
     }
 
     let this = args.first().expect("Expected at least 1 argument found 0");
-    let idx_val = args.get(1).expect("Expeced index as second argument");
+    let idx_val = args.get(1).expect("Expected index as second argument");
 
     match this {
         Value::ListValue(_l) => {

@@ -163,7 +163,7 @@ impl Parser {
                 return self.block_statement();
             }
             Token::IfK(_) => {
-                // If Statetment
+                // If Statement
                 return self.if_statement();
             }
             Token::WhileK(_) => {
@@ -249,7 +249,7 @@ impl Parser {
         // Parses Function name
         let id = self.identifier()?;
 
-        // Parses Funtion params
+        // Parses Function params
         self.eat(&Token::LParan(PosRange::empty()))?;
         let mut params = Vec::new();
 

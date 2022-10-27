@@ -16,9 +16,13 @@
     let run_btn = document.getElementById("run");
     run_btn.addEventListener("click", () => {
       let code = document.getElementById("code").value;
-      run(code).then((res) => {
-        console.log(res);
-      });
+      run(code)
+        .then((res) => {
+          console.log(res);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
     });
   </script>
 </body>

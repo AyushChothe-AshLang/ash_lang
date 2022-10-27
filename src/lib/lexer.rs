@@ -84,7 +84,7 @@ impl Lexer {
             Err("Reached EOF".to_string())
         }
     }
-    fn lookahed(&self) -> char {
+    fn lookahead(&self) -> char {
         if (self.pos + 1) < self.code.len() {
             self.code.chars().nth(self.pos + 1).unwrap()
         } else {
@@ -240,7 +240,7 @@ impl Lexer {
                     )?);
                 }
                 '^' => {
-                    if self.lookahed() == '=' {
+                    if self.lookahead() == '=' {
                         tokens.push(self.add_double_char_token(
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerEq(PosRange::empty()),
@@ -256,7 +256,7 @@ impl Lexer {
                     }
                 }
                 '~' => {
-                    if self.lookahed() == '=' {
+                    if self.lookahead() == '=' {
                         tokens.push(self.add_double_char_token(
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerEq(PosRange::empty()),
