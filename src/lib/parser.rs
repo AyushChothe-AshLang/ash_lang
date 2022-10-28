@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use ordered_float::OrderedFloat;
+
 use crate::tokens::PosRange;
 use crate::utils::utils::{get_assignment, get_assignment_from_token};
 
@@ -381,6 +385,34 @@ impl Parser {
         Ok(Node::List(ListNode { elements }))
     }
 
+    fn map_literal(&mut self) -> ParseResult {
+        let mut elements = HashMap::new();
+
+        self.eat(&Token::LBrace(PosRange::empty()))?;
+
+        if !variant_eq(self.curr(), &Token::RBrace(PosRange::empty())) {
+            let key = self.logical_and_or()?;
+            self.eat(&Token::Colon(PosRange::empty()))?;
+            let val = self.logical_and_or()?;
+            elements.insert(key, val);
+            if variant_eq(self.curr(), &Token::Comma(PosRange::empty())) {
+                while self.pos < self.tokens.len()
+                    && !variant_eq(self.curr(), &Token::RBrace(PosRange::empty()))
+                {
+                    self.eat(&&Token::Comma(PosRange::empty()))?;
+                    let key = self.logical_and_or()?;
+                    self.eat(&Token::Colon(PosRange::empty()))?;
+                    let val = self.logical_and_or()?;
+                    elements.insert(key, val);
+                }
+            }
+        }
+
+        self.eat(&Token::RBrace(PosRange::empty()))?;
+
+        Ok(Node::Map(MapNode { elements }))
+    }
+
     // Parses Logical & |
     fn logical_and_or(&mut self) -> ParseResult {
         let mut res = self.equality()?;
@@ -534,6 +566,7 @@ impl Parser {
                 Ok(res)
             }
             Token::LSquare(_) => self.list_literal(),
+            Token::LBrace(_) => self.map_literal(),
             Token::Identifier(id, _) => {
                 let res;
                 if variant_eq(self.lookahead()?, &Token::LParan(PosRange::empty())) {
@@ -563,7 +596,7 @@ impl Parser {
             }
             Token::Double(num, _) => {
                 let res = Node::Double(DoubleNode {
-                    value: num.to_owned(),
+                    value: OrderedFloat(num.to_owned()),
                 });
                 self.next()?;
                 Ok(res)

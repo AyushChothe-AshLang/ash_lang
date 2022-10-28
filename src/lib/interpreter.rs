@@ -51,6 +51,7 @@ impl Interpreter {
             Node::Boolean(_node) => self.walk_boolean_node(_node),
             Node::String(_node) => self.walk_string_node(_node),
             Node::List(_node) => self.walk_list_node(_node, scope),
+            Node::Map(_node) => self.walk_map_node(_node, scope),
             Node::BinaryOpNumber(_node) => self.walk_binary_op_number_node(_node, scope),
             Node::BinaryOpBoolean(_node) => self.walk_binary_op_boolean_node(_node, scope),
             Node::UnaryNumber(_node) => self.walk_unary_number_node(_node, scope),
@@ -74,7 +75,7 @@ impl Interpreter {
     }
 
     fn walk_double_node(&self, node: &DoubleNode) -> Value {
-        Value::DoubleValue(OrderedFloat(node.value))
+        Value::DoubleValue(node.value)
     }
 
     fn walk_boolean_node(&self, node: &BooleanNode) -> Value {
@@ -91,6 +92,16 @@ impl Interpreter {
                 .clone()
                 .iter_mut()
                 .map(|e| self.walk(e, scope))
+                .collect(),
+        )
+    }
+
+    fn walk_map_node(&mut self, node: &MapNode, scope: &mut ScopePtr) -> Value {
+        Value::MapValue(
+            node.elements
+                .clone()
+                .iter_mut()
+                .map(|(k, v)| (self.walk(&mut k.clone(), scope), self.walk(v, scope)))
                 .collect(),
         )
     }
@@ -322,6 +333,19 @@ impl Interpreter {
                 },
                 Value::ListValue(r) => match op {
                     Arithmetic::Addition => Value::ListValue([l, r].concat()),
+                    _ => panic!("Invalid Operands"),
+                },
+                _ => panic!("Invalid Operands"),
+            },
+            Value::MapValue(l) => match right {
+                Value::MapValue(r) => match op {
+                    Arithmetic::Addition => {
+                        let mut lc = l.clone();
+                        for (k, v) in r.iter() {
+                            lc.insert(k.clone(), v.clone());
+                        }
+                        Value::MapValue(lc)
+                    }
                     _ => panic!("Invalid Operands"),
                 },
                 _ => panic!("Invalid Operands"),

@@ -15,8 +15,6 @@ fn bubbleSort(arr) {
 }
 
 fn main() {
-  let nums = [1, 3, 5, 7, 9, 2, 4, 6, 8, 0];
-  let map={"a":1,"b":2};
-  map=set(map,"a",3);
-  println(get(map,"a"));
+  let nums = [1, 3, 5, 7, 9, 2, 4 ,6, 8, 0];
+  return (bubbleSort(nums));
 }

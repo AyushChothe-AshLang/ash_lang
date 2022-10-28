@@ -153,6 +153,7 @@ pub fn ash_get(args: Vec<Value>) -> Value {
                 panic!("Invalid Index")
             }
         }
+        Value::MapValue(_m) => _m.get(idx_val).unwrap_or(&Value::None).clone(),
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
                 Value::StringValue(
@@ -185,6 +186,9 @@ pub fn ash_set(args: Vec<Value>) -> Value {
             } else {
                 panic!("Invalid Index")
             }
+        }
+        Value::MapValue(_m) => {
+            _m.insert(idx_val.clone(), val.clone());
         }
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {

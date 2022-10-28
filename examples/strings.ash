@@ -47,5 +47,5 @@ fn join(ip, sep) {
 }
 
 fn main() {
-  println(join(split("  Ayush  Mahesh   Chothe", " "), "_"));
+  return (join(split("  Ayush   Chothe", " "), "_"));
 }

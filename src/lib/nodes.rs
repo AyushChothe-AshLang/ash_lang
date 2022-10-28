@@ -1,14 +1,17 @@
+use ordered_float::OrderedFloat;
+
 use crate::values::Value;
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
 // Node
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Node {
     Int(IntNode),
     Double(DoubleNode),
     Boolean(BooleanNode),
     String(StringNode),
     List(ListNode),
+    Map(MapNode),
     Identifier(IdentifierNode),
     UnaryNumber(UnaryNumberNode),
     UnaryBoolean(UnaryBooleanNode),
@@ -27,50 +30,65 @@ pub enum Node {
 }
 
 // IntNode
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct IntNode {
     pub value: i64,
 }
 
 // DoubleNode
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DoubleNode {
-    pub value: f64,
+    pub value: OrderedFloat<f64>,
 }
 // BooleanNode
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BooleanNode {
     pub value: bool,
 }
 // StringNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct StringNode {
     pub value: String,
 }
 // ListNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ListNode {
     pub elements: Vec<Node>,
 }
+
+// MapNode
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MapNode {
+    pub elements: HashMap<Node, Node>,
+}
+
+impl std::hash::Hash for MapNode {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for (k, v) in self.elements.iter() {
+            (k, v).hash(state);
+        }
+    }
+}
+
 // IdentifierNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IdentifierNode {
     pub value: String,
 }
 
 // UnaryArithmetic
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryArithmetic {
     Plus,
     Minus,
 }
 // UnaryOperator
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryOperator {
     Not,
 }
 // UnaryNumberNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnaryNumberNode {
     pub op: UnaryArithmetic,
     pub value: Box<Node>,
@@ -88,7 +106,7 @@ impl UnaryNumberNode {
     }
 }
 // UnaryBooleanNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnaryBooleanNode {
     pub op: UnaryOperator,
     pub value: Box<Node>,
@@ -104,7 +122,7 @@ impl UnaryBooleanNode {
 }
 
 // Arithmetic Enum
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Arithmetic {
     Addition,    // +
     Subtraction, // -
@@ -116,7 +134,7 @@ pub enum Arithmetic {
     PowerDivide, // ^/
 }
 // Comparison Enum
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Comparison {
     DoubleEquals,  // ==
     NotEquals,     // !=
@@ -130,7 +148,7 @@ pub enum Comparison {
 }
 
 // Assignment Enum
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Assignment {
     Equals,        // =
     PlusEq,        // +=
@@ -144,7 +162,7 @@ pub enum Assignment {
 }
 
 // BinaryOpNumberNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryOpNumberNode {
     pub left: Box<Node>,
     pub right: Box<Node>,
@@ -181,7 +199,7 @@ impl BinaryOpNumberNode {
     }
 }
 // BinaryOpBooleanNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryOpBooleanNode {
     pub left: Box<Node>,
     pub right: Box<Node>,
@@ -219,7 +237,7 @@ impl BinaryOpBooleanNode {
 }
 
 // AssignmentNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AssignmentNode {
     pub id: String,
     pub value: Box<Node>,
@@ -237,7 +255,7 @@ impl AssignmentNode {
 }
 
 // BlockStatementNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BlockStatementNode {
     pub value: Vec<Node>,
 }
@@ -249,7 +267,7 @@ impl BlockStatementNode {
 }
 
 // FunctionCallNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionCallNode {
     pub id: String,
     pub args: Vec<Node>,
@@ -262,12 +280,20 @@ impl FunctionCallNode {
 }
 
 // FunctionDeclarationNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionDeclarationNode {
     pub id: String,
     pub params: Vec<String>,
     pub body: Box<Node>,
     pub memo: Option<RefCell<HashMap<Vec<Value>, Value>>>,
+}
+impl std::hash::Hash for FunctionDeclarationNode {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+        self.params.hash(state);
+        self.body.hash(state);
+        core::mem::discriminant(&self.memo).hash(state);
+    }
 }
 
 impl FunctionDeclarationNode {
@@ -305,7 +331,7 @@ impl FunctionDeclarationNode {
 }
 
 // MultiDeclarationNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MultiDeclarationNode {
     pub declarations: Vec<Node>,
 }
@@ -315,7 +341,7 @@ impl MultiDeclarationNode {
     }
 }
 // DeclarationNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DeclarationNode {
     pub id: String,
     pub value: Box<Node>,
@@ -327,7 +353,7 @@ impl DeclarationNode {
 }
 
 // WhileLoopNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WhileLoopNode {
     pub condition: Box<Node>,
     pub body: Box<Node>,
@@ -339,7 +365,7 @@ impl WhileLoopNode {
 }
 
 // IfStatementNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IfStatementNode {
     pub condition: Box<Node>,
     pub true_block: Box<Node>,
@@ -363,7 +389,7 @@ impl IfStatementNode {
 }
 
 // ElifStatementNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ElifStatementNode {
     pub condition: Box<Node>,
     pub true_block: Box<Node>,
@@ -378,7 +404,7 @@ impl ElifStatementNode {
 }
 
 // ReturnNode
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ReturnNode {
     pub res: Box<Node>,
 }
