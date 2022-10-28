@@ -2,6 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export function run(a: number, b: number): number;
+export function analyze(a: number, b: number): number;
 export const __wbindgen_export_0: WebAssembly.Table;
 export function _dyn_core__ops__function__FnMut__A____Output___R_as_wasm_bindgen__closure__WasmClosure___describe__invoke__h357b5957df8b0438(a: number, b: number, c: number): void;
 export function __wbindgen_malloc(a: number): number;

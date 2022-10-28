@@ -1,22 +1,14 @@
-fn bubbleSort(arr) {
-  let i = 0, j = 0;
-  while (i < len(arr)) {
-    j = 0;
-    while (j < (len(arr) - 1)) {
-      let x = get(arr, j), y = get(arr, j + 1);
-      if (x > y) {
-        arr = set(set(arr, j, y), j + 1, x);
-      }
-      j += 1;
+fn main(){
+  let i = 0, nums = [1, 2, 2, 3, 3, 3], counter = {};
+  while (i < len(nums)){
+    let num = get(nums, i);
+    if (!has(counter, num)){
+      counter = set(counter, num, 1);
+    } else {
+      let val = get(counter, num);
+      counter = set(counter, num, (val + 1));
     }
     i += 1;
   }
-  return arr;
-}
-
-fn main() {
-  let nums = [1, 3, 5, 7, 9, 2, 4, 6, 8, 0];
-  let map={"a":1,"b":2};
-  map=set(map,"a",3);
-  println(get(map,"a"));
+  println(counter);
 }

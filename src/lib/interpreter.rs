@@ -32,6 +32,8 @@ impl Interpreter {
             (String::from("set"), ash_set as BuiltInFn),
             (String::from("len"), ash_len as BuiltInFn),
             (String::from("pop"), ash_pop as BuiltInFn),
+            (String::from("keys"), ash_keys as BuiltInFn),
+            (String::from("has"), ash_has as BuiltInFn),
         ]);
         Interpreter {
             ast,

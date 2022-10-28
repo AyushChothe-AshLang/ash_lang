@@ -577,6 +577,11 @@ impl Parser {
                 }
                 Ok(res)
             }
+            Token::Not(_) => {
+                self.next()?;
+                let res = UnaryBooleanNode::not(Box::new(self.atom()?));
+                Ok(res)
+            }
             Token::Plus(_) => {
                 self.next()?;
                 let res = UnaryNumberNode::plus(Box::new(self.atom()?));

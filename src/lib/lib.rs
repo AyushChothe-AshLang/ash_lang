@@ -25,3 +25,14 @@ pub async fn run(code: String) -> Result<String, String> {
 
     Ok(format!("{}", interpreter.eval()))
 }
+
+#[wasm_bindgen]
+pub async fn analyze(code: String) -> Result<String, String> {
+    let mut lexer = Lexer::new(code);
+    let tokens = lexer.tokenize()?;
+
+    let mut parser = Parser::new(tokens);
+    let _ = parser.parse()?;
+
+    Ok(format!(""))
+}

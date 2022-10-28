@@ -28,6 +28,7 @@ pub fn ash_print(args: Vec<Value>) -> Value {
 
     Value::None
 }
+
 pub fn ash_println(args: Vec<Value>) -> Value {
     let res = args
         .iter()
@@ -40,6 +41,7 @@ pub fn ash_println(args: Vec<Value>) -> Value {
 
     Value::None
 }
+
 pub fn ash_input(args: Vec<Value>) -> Value {
     print!(
         "{}",
@@ -127,6 +129,7 @@ pub fn ash_min(args: Vec<Value>) -> Value {
     }
     min.to_owned()
 }
+
 pub fn ash_max(args: Vec<Value>) -> Value {
     let mut max = args.first().expect("Expected at least 1 argument found 0");
     for arg in args.iter() {
@@ -143,7 +146,7 @@ pub fn ash_get(args: Vec<Value>) -> Value {
     }
 
     let this = args.first().expect("Expected at least 1 argument found 0");
-    let idx_val = args.get(1).expect("Expected index as second argument");
+    let idx_val = args.get(1).expect("Expected index/key as second argument");
 
     match this {
         Value::ListValue(_l) => {
@@ -153,7 +156,7 @@ pub fn ash_get(args: Vec<Value>) -> Value {
                 panic!("Invalid Index")
             }
         }
-        Value::MapValue(_m) => _m.get(idx_val).unwrap_or(&Value::None).clone(),
+        Value::MapValue(_m) => _m.get(idx_val).expect("Key not found").clone(),
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
                 Value::StringValue(
@@ -169,6 +172,7 @@ pub fn ash_get(args: Vec<Value>) -> Value {
         _ => panic!("Invalid argument"),
     }
 }
+
 pub fn ash_set(args: Vec<Value>) -> Value {
     if args.len() != 3 {
         panic!("Invalid arguments")
@@ -176,7 +180,7 @@ pub fn ash_set(args: Vec<Value>) -> Value {
 
     let this = args.first().expect("Expected at least 1 argument found 0");
     let mut this_mut = this.clone();
-    let idx_val = args.get(1).expect("Expected index as second argument");
+    let idx_val = args.get(1).expect("Expected index/key as second argument");
     let val = args.get(2).expect("Expected value as third argument");
 
     match &mut this_mut {
@@ -207,6 +211,7 @@ pub fn ash_set(args: Vec<Value>) -> Value {
     }
     this_mut
 }
+
 pub fn ash_len(args: Vec<Value>) -> Value {
     if args.len() != 1 {
         panic!("Invalid arguments")
@@ -216,6 +221,7 @@ pub fn ash_len(args: Vec<Value>) -> Value {
 
     match this {
         Value::ListValue(_l) => Value::IntValue(_l.len() as i64),
+        Value::MapValue(_m) => Value::IntValue(_m.len() as i64),
         Value::StringValue(_s) => Value::IntValue(_s.len() as i64),
         _ => panic!("Invalid argument"),
     }
@@ -230,7 +236,7 @@ pub fn ash_pop(args: Vec<Value>) -> Value {
         .first()
         .expect("Expected at least 1 argument found 0")
         .clone();
-    let idx_val = args.get(1).expect("Expected index as second argument");
+    let idx_val = args.get(1).expect("Expected index/key as second argument");
 
     match &mut this {
         Value::ListValue(_l) => {
@@ -239,6 +245,9 @@ pub fn ash_pop(args: Vec<Value>) -> Value {
             } else {
                 panic!("Invalid Index")
             }
+        }
+        Value::MapValue(_m) => {
+            _m.remove(idx_val);
         }
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
@@ -250,5 +259,55 @@ pub fn ash_pop(args: Vec<Value>) -> Value {
         }
         _ => panic!("Invalid argument"),
     }
-    this.clone()
+    this
+}
+
+pub fn ash_keys(args: Vec<Value>) -> Value {
+    let this = args
+        .first()
+        .expect("Expected at least 1 argument found 0")
+        .clone();
+
+    match this {
+        Value::MapValue(_m) => {
+            let mut keys = vec![];
+            for k in _m.keys() {
+                keys.push(k.clone());
+            }
+            Value::ListValue(keys)
+        }
+        _ => panic!("Invalid argument"),
+    }
+}
+
+pub fn ash_has(args: Vec<Value>) -> Value {
+    if args.len() != 2 {
+        panic!("Invalid arguments")
+    }
+
+    let this = args
+        .first()
+        .expect("Expected at least 1 argument found 0")
+        .clone();
+    let idx_val = args.get(1).expect("Expected value/key as second argument");
+
+    match this {
+        Value::ListValue(_l) => {
+            for k in _l {
+                if k == *idx_val {
+                    return Value::BooleanValue(true);
+                }
+            }
+            return Value::BooleanValue(false);
+        }
+        Value::MapValue(_m) => {
+            for k in _m.keys() {
+                if k == idx_val {
+                    return Value::BooleanValue(true);
+                }
+            }
+            return Value::BooleanValue(false);
+        }
+        _ => panic!("Invalid argument"),
+    }
 }
