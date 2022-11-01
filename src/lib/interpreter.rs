@@ -68,6 +68,8 @@ impl Interpreter {
             Node::WhileLoop(_node) => self.walk_while_loop_node(_node, scope),
             Node::IfStatement(_node) => self.walk_if_statement_node(_node, scope),
             Node::Return(_node) => self.walk_return_node(_node, scope),
+            Node::Break => Value::Break,
+            Node::Continue => Value::Continue,
             Node::ElifStatement(_) => panic!("This can't happen"),
         }
     }
@@ -109,7 +111,10 @@ impl Interpreter {
     }
 
     fn walk_return_node(&mut self, node: &mut ReturnNode, scope: &mut ScopePtr) -> Value {
-        let res = self.walk(&mut node.res, scope);
+        let mut res = Value::None;
+        if let Some(val) = &mut (node.res) {
+            res = self.walk(val, scope);
+        }
         Value::ReturnValue(Box::new(res))
     }
 
@@ -131,12 +136,16 @@ impl Interpreter {
                 res = self.walk(stmt, local);
                 if let Value::ReturnValue(_) = res {
                     return res;
+                } else if res == Value::Break || res == Value::Continue {
+                    return res;
                 }
             }
         } else {
             for stmt in node.value.iter_mut() {
                 res = self.walk(stmt, scope);
                 if let Value::ReturnValue(_) = res {
+                    return res;
+                } else if res == Value::Break || res == Value::Continue {
                     return res;
                 }
             }
@@ -485,6 +494,10 @@ impl Interpreter {
             let res = self.walk(&mut node.body, scope);
             if let Value::ReturnValue(_) = res {
                 return res;
+            } else if res == Value::Break {
+                break;
+            } else if res == Value::Continue {
+                continue;
             }
         }
         Value::None

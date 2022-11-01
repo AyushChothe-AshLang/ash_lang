@@ -1,4 +1,5 @@
 pub mod built_in;
+pub mod formatter;
 pub mod interpreter;
 pub mod lexer;
 pub mod nodes;

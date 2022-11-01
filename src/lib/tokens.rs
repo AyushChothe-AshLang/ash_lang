@@ -101,167 +101,167 @@ impl Token {
             Token::Boolean(_, _) => "Boolean",
             Token::String(_, _) => "String",
             Token::Identifier(_, _) => "Identifier",
-            Token::Plus(_) => "Plus",
-            Token::Minus(_) => "Minus",
-            Token::Multiply(_) => "Multiply",
-            Token::Divide(_) => "Divide",
-            Token::Power(_) => "Power",
-            Token::Modulus(_) => "Modulus",
-            Token::Not(_) => "Not",
-            Token::Equals(_) => "Equals",
-            Token::DoubleEquals(_) => "DoubleEquals",
-            Token::NotEquals(_) => "NotEquals",
-            Token::LessThan(_) => "LessThan",
-            Token::LessThanEq(_) => "LessThanEq",
-            Token::GreaterThan(_) => "GreaterThan",
-            Token::GreaterThanEq(_) => "GreaterThanEq",
-            Token::LParan(_) => "LParan",
-            Token::RParan(_) => "RParan",
-            Token::LBrace(_) => "LBrace",
-            Token::RBrace(_) => "RBrace",
-            Token::LSquare(_) => "LSquare",
-            Token::RSquare(_) => "RSquare",
-            Token::Comma(_) => "Comma",
-            Token::Colon(_) => "Colon",
-            Token::Semicolon(_) => "Semicolon",
+            Token::Plus(_) => "+",
+            Token::Minus(_) => "-",
+            Token::Multiply(_) => "*",
+            Token::Divide(_) => "/",
+            Token::Power(_) => "^",
+            Token::Modulus(_) => "%",
+            Token::Not(_) => "!",
+            Token::Equals(_) => "=",
+            Token::DoubleEquals(_) => "==",
+            Token::NotEquals(_) => "!=",
+            Token::LessThan(_) => "<",
+            Token::LessThanEq(_) => "<=",
+            Token::GreaterThan(_) => ">",
+            Token::GreaterThanEq(_) => ">=",
+            Token::LParan(_) => "(",
+            Token::RParan(_) => ")",
+            Token::LBrace(_) => "{",
+            Token::RBrace(_) => "}",
+            Token::LSquare(_) => "[",
+            Token::RSquare(_) => "]",
+            Token::Comma(_) => ",",
+            Token::Colon(_) => "colon",
+            Token::Semicolon(_) => ";",
             Token::EOF(_) => "EOF",
-            Token::WhileK(_) => "WhileK",
-            Token::IfK(_) => "IfK",
-            Token::ElifK(_) => "ElifK",
-            Token::ElseK(_) => "ElseK",
-            Token::FnK(_) => "FnK",
-            Token::CFnK(_) => "CFnK",
-            Token::LetK(_) => "LetK",
-            Token::BreakK(_) => "BreakK",
-            Token::ContinueK(_) => "ContinueK",
-            Token::ReturnK(_) => "ReturnK",
-            Token::And(_) => "And",
-            Token::Or(_) => "Or",
-            Token::TildeDivide(_) => "TildeDivide",
-            Token::PowerDivide(_) => "PowerDivide",
-            Token::PlusEq(_) => "PlusEq",
-            Token::MinusEq(_) => "MinusEq",
-            Token::MultiplyEq(_) => "MultiplyEq",
-            Token::DivideEq(_) => "DivideEq",
-            Token::TildeDivideEq(_) => "TildeDivideEq",
-            Token::PowerEq(_) => "PowerEq",
-            Token::PowerDivideEq(_) => "PowerDivideEq",
-            Token::ModulusEq(_) => "ModulusEq",
-            Token::Tilde(_) => "Tilde",
+            Token::WhileK(_) => "while",
+            Token::IfK(_) => "if",
+            Token::ElifK(_) => "elif",
+            Token::ElseK(_) => "else",
+            Token::FnK(_) => "fn",
+            Token::CFnK(_) => "cfn",
+            Token::LetK(_) => "let",
+            Token::BreakK(_) => "break",
+            Token::ContinueK(_) => "continue",
+            Token::ReturnK(_) => "return",
+            Token::And(_) => "&",
+            Token::Or(_) => "|",
+            Token::TildeDivide(_) => "~/",
+            Token::PowerDivide(_) => "^/",
+            Token::PlusEq(_) => "+=",
+            Token::MinusEq(_) => "-=",
+            Token::MultiplyEq(_) => "*=",
+            Token::DivideEq(_) => "/=",
+            Token::TildeDivideEq(_) => "~/=",
+            Token::PowerEq(_) => "^=",
+            Token::PowerDivideEq(_) => "^/=",
+            Token::ModulusEq(_) => "%=",
+            Token::Tilde(_) => "~",
         }
         .to_string()
     }
 
     pub fn get_pos(&self) -> String {
         match self {
-            Token::Int(_, pos) => pos.get_pos(),
-            Token::Double(_, pos) => pos.get_pos(),
-            Token::Boolean(_, pos) => pos.get_pos(),
-            Token::String(_, pos) => pos.get_pos(),
-            Token::Identifier(_, pos) => pos.get_pos(),
-            Token::Plus(pos) => pos.get_pos(),
-            Token::Minus(pos) => pos.get_pos(),
-            Token::Multiply(pos) => pos.get_pos(),
-            Token::Divide(pos) => pos.get_pos(),
-            Token::Power(pos) => pos.get_pos(),
-            Token::Modulus(pos) => pos.get_pos(),
-            Token::Not(pos) => pos.get_pos(),
-            Token::Equals(pos) => pos.get_pos(),
-            Token::DoubleEquals(pos) => pos.get_pos(),
-            Token::NotEquals(pos) => pos.get_pos(),
-            Token::LessThan(pos) => pos.get_pos(),
-            Token::LessThanEq(pos) => pos.get_pos(),
-            Token::GreaterThan(pos) => pos.get_pos(),
-            Token::GreaterThanEq(pos) => pos.get_pos(),
-            Token::LParan(pos) => pos.get_pos(),
-            Token::RParan(pos) => pos.get_pos(),
-            Token::LBrace(pos) => pos.get_pos(),
-            Token::RBrace(pos) => pos.get_pos(),
-            Token::LSquare(pos) => pos.get_pos(),
-            Token::RSquare(pos) => pos.get_pos(),
-            Token::Comma(pos) => pos.get_pos(),
-            Token::Colon(pos) => pos.get_pos(),
-            Token::Semicolon(pos) => pos.get_pos(),
-            Token::EOF(pos) => pos.get_pos(),
-            Token::WhileK(pos) => pos.get_pos(),
-            Token::IfK(pos) => pos.get_pos(),
-            Token::ElifK(pos) => pos.get_pos(),
-            Token::ElseK(pos) => pos.get_pos(),
-            Token::FnK(pos) => pos.get_pos(),
-            Token::CFnK(pos) => pos.get_pos(),
-            Token::LetK(pos) => pos.get_pos(),
-            Token::BreakK(pos) => pos.get_pos(),
-            Token::ContinueK(pos) => pos.get_pos(),
-            Token::ReturnK(pos) => pos.get_pos(),
-            Token::And(pos) => pos.get_pos(),
-            Token::Or(pos) => pos.get_pos(),
-            Token::TildeDivide(pos) => pos.get_pos(),
-            Token::PowerDivide(pos) => pos.get_pos(),
-            Token::PlusEq(pos) => pos.get_pos(),
-            Token::MinusEq(pos) => pos.get_pos(),
-            Token::MultiplyEq(pos) => pos.get_pos(),
-            Token::DivideEq(pos) => pos.get_pos(),
-            Token::TildeDivideEq(pos) => pos.get_pos(),
-            Token::PowerEq(pos) => pos.get_pos(),
-            Token::PowerDivideEq(pos) => pos.get_pos(),
-            Token::ModulusEq(pos) => pos.get_pos(),
-            Token::Tilde(pos) => pos.get_pos(),
+            Token::Int(_, pos)
+            | Token::Double(_, pos)
+            | Token::Boolean(_, pos)
+            | Token::String(_, pos)
+            | Token::Identifier(_, pos)
+            | Token::Plus(pos)
+            | Token::Minus(pos)
+            | Token::Multiply(pos)
+            | Token::Divide(pos)
+            | Token::Power(pos)
+            | Token::Modulus(pos)
+            | Token::Not(pos)
+            | Token::Equals(pos)
+            | Token::DoubleEquals(pos)
+            | Token::NotEquals(pos)
+            | Token::LessThan(pos)
+            | Token::LessThanEq(pos)
+            | Token::GreaterThan(pos)
+            | Token::GreaterThanEq(pos)
+            | Token::LParan(pos)
+            | Token::RParan(pos)
+            | Token::LBrace(pos)
+            | Token::RBrace(pos)
+            | Token::LSquare(pos)
+            | Token::RSquare(pos)
+            | Token::Comma(pos)
+            | Token::Colon(pos)
+            | Token::Semicolon(pos)
+            | Token::EOF(pos)
+            | Token::WhileK(pos)
+            | Token::IfK(pos)
+            | Token::ElifK(pos)
+            | Token::ElseK(pos)
+            | Token::FnK(pos)
+            | Token::CFnK(pos)
+            | Token::LetK(pos)
+            | Token::BreakK(pos)
+            | Token::ContinueK(pos)
+            | Token::ReturnK(pos)
+            | Token::And(pos)
+            | Token::Or(pos)
+            | Token::TildeDivide(pos)
+            | Token::PowerDivide(pos)
+            | Token::PlusEq(pos)
+            | Token::MinusEq(pos)
+            | Token::MultiplyEq(pos)
+            | Token::DivideEq(pos)
+            | Token::TildeDivideEq(pos)
+            | Token::PowerEq(pos)
+            | Token::PowerDivideEq(pos)
+            | Token::ModulusEq(pos)
+            | Token::Tilde(pos) => pos.get_pos(),
         }
     }
     pub fn set_pos(&mut self, pos_range: PosRange) -> Token {
         match self {
-            Token::Int(_, pos) => pos.set_pos(pos_range),
-            Token::Double(_, pos) => pos.set_pos(pos_range),
-            Token::Boolean(_, pos) => pos.set_pos(pos_range),
-            Token::String(_, pos) => pos.set_pos(pos_range),
-            Token::Identifier(_, pos) => pos.set_pos(pos_range),
-            Token::Plus(pos) => pos.set_pos(pos_range),
-            Token::Minus(pos) => pos.set_pos(pos_range),
-            Token::Multiply(pos) => pos.set_pos(pos_range),
-            Token::Divide(pos) => pos.set_pos(pos_range),
-            Token::Power(pos) => pos.set_pos(pos_range),
-            Token::Modulus(pos) => pos.set_pos(pos_range),
-            Token::Not(pos) => pos.set_pos(pos_range),
-            Token::Equals(pos) => pos.set_pos(pos_range),
-            Token::DoubleEquals(pos) => pos.set_pos(pos_range),
-            Token::NotEquals(pos) => pos.set_pos(pos_range),
-            Token::LessThan(pos) => pos.set_pos(pos_range),
-            Token::LessThanEq(pos) => pos.set_pos(pos_range),
-            Token::GreaterThan(pos) => pos.set_pos(pos_range),
-            Token::GreaterThanEq(pos) => pos.set_pos(pos_range),
-            Token::LParan(pos) => pos.set_pos(pos_range),
-            Token::RParan(pos) => pos.set_pos(pos_range),
-            Token::LBrace(pos) => pos.set_pos(pos_range),
-            Token::RBrace(pos) => pos.set_pos(pos_range),
-            Token::LSquare(pos) => pos.set_pos(pos_range),
-            Token::RSquare(pos) => pos.set_pos(pos_range),
-            Token::Comma(pos) => pos.set_pos(pos_range),
-            Token::Colon(pos) => pos.set_pos(pos_range),
-            Token::Semicolon(pos) => pos.set_pos(pos_range),
-            Token::EOF(pos) => pos.set_pos(pos_range),
-            Token::WhileK(pos) => pos.set_pos(pos_range),
-            Token::IfK(pos) => pos.set_pos(pos_range),
-            Token::ElifK(pos) => pos.set_pos(pos_range),
-            Token::ElseK(pos) => pos.set_pos(pos_range),
-            Token::FnK(pos) => pos.set_pos(pos_range),
-            Token::CFnK(pos) => pos.set_pos(pos_range),
-            Token::LetK(pos) => pos.set_pos(pos_range),
-            Token::BreakK(pos) => pos.set_pos(pos_range),
-            Token::ContinueK(pos) => pos.set_pos(pos_range),
-            Token::ReturnK(pos) => pos.set_pos(pos_range),
-            Token::And(pos) => pos.set_pos(pos_range),
-            Token::Or(pos) => pos.set_pos(pos_range),
-            Token::TildeDivide(pos) => pos.set_pos(pos_range),
-            Token::PowerDivide(pos) => pos.set_pos(pos_range),
-            Token::PlusEq(pos) => pos.set_pos(pos_range),
-            Token::MinusEq(pos) => pos.set_pos(pos_range),
-            Token::MultiplyEq(pos) => pos.set_pos(pos_range),
-            Token::DivideEq(pos) => pos.set_pos(pos_range),
-            Token::TildeDivideEq(pos) => pos.set_pos(pos_range),
-            Token::PowerEq(pos) => pos.set_pos(pos_range),
-            Token::PowerDivideEq(pos) => pos.set_pos(pos_range),
-            Token::ModulusEq(pos) => pos.set_pos(pos_range),
-            Token::Tilde(pos) => pos.set_pos(pos_range),
+            Token::Int(_, pos)
+            | Token::Double(_, pos)
+            | Token::Boolean(_, pos)
+            | Token::String(_, pos)
+            | Token::Identifier(_, pos)
+            | Token::Plus(pos)
+            | Token::Minus(pos)
+            | Token::Multiply(pos)
+            | Token::Divide(pos)
+            | Token::Power(pos)
+            | Token::Modulus(pos)
+            | Token::Not(pos)
+            | Token::Equals(pos)
+            | Token::DoubleEquals(pos)
+            | Token::NotEquals(pos)
+            | Token::LessThan(pos)
+            | Token::LessThanEq(pos)
+            | Token::GreaterThan(pos)
+            | Token::GreaterThanEq(pos)
+            | Token::LParan(pos)
+            | Token::RParan(pos)
+            | Token::LBrace(pos)
+            | Token::RBrace(pos)
+            | Token::LSquare(pos)
+            | Token::RSquare(pos)
+            | Token::Comma(pos)
+            | Token::Colon(pos)
+            | Token::Semicolon(pos)
+            | Token::EOF(pos)
+            | Token::WhileK(pos)
+            | Token::IfK(pos)
+            | Token::ElifK(pos)
+            | Token::ElseK(pos)
+            | Token::FnK(pos)
+            | Token::CFnK(pos)
+            | Token::LetK(pos)
+            | Token::BreakK(pos)
+            | Token::ContinueK(pos)
+            | Token::ReturnK(pos)
+            | Token::And(pos)
+            | Token::Or(pos)
+            | Token::TildeDivide(pos)
+            | Token::PowerDivide(pos)
+            | Token::PlusEq(pos)
+            | Token::MinusEq(pos)
+            | Token::MultiplyEq(pos)
+            | Token::DivideEq(pos)
+            | Token::TildeDivideEq(pos)
+            | Token::PowerEq(pos)
+            | Token::PowerDivideEq(pos)
+            | Token::ModulusEq(pos)
+            | Token::Tilde(pos) => pos.set_pos(pos_range),
         };
         self.clone()
     }
@@ -275,11 +275,6 @@ impl Position {
             format!("[{}:{}]", self.line, self.column)
         }
     }
-
-    // fn set_pos(&mut self, pos: Position) {
-    //     self.line = pos.line;
-    //     self.column = pos.column;
-    // }
 }
 
 impl PosRange {

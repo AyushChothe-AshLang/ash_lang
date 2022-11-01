@@ -10,13 +10,13 @@
   <textarea name="code" id="code" cols="100" rows="15"></textarea><br />
   <button id="run">Run</button>
   <script type="module">
-    import init, { run } from "./pkg/ash_lang.js";
+    import init, { run, analyze } from "./pkg/ash_lang.js";
     init();
 
     let run_btn = document.getElementById("run");
     run_btn.addEventListener("click", () => {
       let code = document.getElementById("code").value;
-      run(code)
+      analyze(code)
         .then((res) => {
           console.log(res);
         })

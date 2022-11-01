@@ -15,6 +15,8 @@ pub enum Value {
     MapValue(HashMap<Value, Value>),
     BooleanValue(bool),
     ReturnValue(Box<Value>),
+    Break,
+    Continue,
     None,
 }
 
@@ -120,6 +122,8 @@ impl Display for Value {
             }
             Value::BooleanValue(b) => b.fmt(f),
             Value::ReturnValue(r) => write!(f, "{}", *r),
+            Value::Break => write!(f, "Break"),
+            Value::Continue => write!(f, "Continue"),
             Value::None => write!(f, "None"),
         }
     }

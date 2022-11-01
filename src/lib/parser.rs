@@ -69,7 +69,7 @@ impl Parser {
             Ok(())
         } else {
             Err(format!(
-                "Invalid Syntax {}: Expected {} found {}",
+                "Invalid Syntax {}: Expected '{}' found '{}'",
                 self.curr().get_pos(),
                 token_type,
                 tkn
@@ -130,7 +130,7 @@ impl Parser {
         }
     }
 
-    fn control_flow_statement(&mut self) -> ParseResult {
+    fn control_flow_statement(&mut self, in_loop: bool) -> ParseResult {
         match self.curr() {
             Token::Identifier(_, _) => {
                 // Assignment or FunctionCall
@@ -164,11 +164,11 @@ impl Parser {
             }
             Token::LBrace(_) => {
                 // Block Statement
-                return self.block_statement();
+                return self.block_statement(in_loop);
             }
             Token::IfK(_) => {
                 // If Statement
-                return self.if_statement();
+                return self.if_statement(in_loop);
             }
             Token::WhileK(_) => {
                 // While Loop
@@ -177,6 +177,14 @@ impl Parser {
             Token::ReturnK(_) => {
                 // Return Statement
                 return self.return_statement();
+            }
+            Token::BreakK(_) => {
+                // Break Statement
+                return self.break_statement(in_loop);
+            }
+            Token::ContinueK(_) => {
+                // Continue Statement
+                return self.continue_statement(in_loop);
             }
             _ => {
                 let res = self.logical_and_or();
@@ -188,18 +196,39 @@ impl Parser {
 
     fn return_statement(&mut self) -> ParseResult {
         self.eat(&Token::ReturnK(PosRange::empty()))?;
-        let res = self.logical_and_or()?;
+        let mut res = None;
+        if !variant_eq(self.curr(), &Token::Semicolon(PosRange::empty())) {
+            res = Some(Box::new(self.logical_and_or()?));
+        }
         self.eat(&Token::Semicolon(PosRange::empty()))?;
-        Ok(ReturnNode::new(Box::new(res)))
+        Ok(ReturnNode::new(res))
     }
 
-    fn if_statement(&mut self) -> ParseResult {
+    fn break_statement(&mut self, in_loop: bool) -> ParseResult {
+        if !in_loop {
+            return Err(self.panic_invalid_syntax("can only be used inside loops"));
+        }
+        self.eat(&Token::BreakK(PosRange::empty()))?;
+        self.eat(&Token::Semicolon(PosRange::empty()))?;
+        Ok(Node::Break)
+    }
+
+    fn continue_statement(&mut self, in_loop: bool) -> ParseResult {
+        if !in_loop {
+            return Err(self.panic_invalid_syntax("can only be used inside loops"));
+        }
+        self.eat(&Token::ContinueK(PosRange::empty()))?;
+        self.eat(&Token::Semicolon(PosRange::empty()))?;
+        Ok(Node::Continue)
+    }
+
+    fn if_statement(&mut self, in_loop: bool) -> ParseResult {
         // Parse if condition
         self.eat(&Token::IfK(PosRange::empty()))?;
         self.eat(&Token::LParan(PosRange::empty()))?;
         let condition = Box::new(self.logical_and_or()?);
         self.eat(&Token::RParan(PosRange::empty()))?;
-        let true_block = Box::new(self.block_statement()?);
+        let true_block = Box::new(self.block_statement(in_loop)?);
 
         // Parse elif statements
         let mut elif_blocks: Vec<Node> = Vec::new();
@@ -211,7 +240,7 @@ impl Parser {
 
             let condition = Box::new(self.logical_and_or()?);
             self.eat(&Token::RParan(PosRange::empty()))?;
-            let true_block = Box::new(self.block_statement()?);
+            let true_block = Box::new(self.block_statement(in_loop)?);
             elif_blocks.push(ElifStatementNode::new(condition, true_block));
         }
 
@@ -219,7 +248,7 @@ impl Parser {
         let mut else_block = None;
         if variant_eq(self.curr(), &Token::ElseK(PosRange::empty())) {
             self.eat(&&Token::ElseK(PosRange::empty()))?;
-            else_block = Some(Box::new(self.block_statement()?));
+            else_block = Some(Box::new(self.block_statement(in_loop)?));
         }
         Ok(IfStatementNode::new(
             condition,
@@ -237,7 +266,7 @@ impl Parser {
         let condition = self.logical_and_or()?;
         self.eat(&Token::RParan(PosRange::empty()))?;
 
-        let body = self.block_statement()?;
+        let body = self.block_statement(true)?;
 
         Ok(WhileLoopNode::new(Box::new(condition), Box::new(body)))
     }
@@ -272,7 +301,7 @@ impl Parser {
         self.eat(&Token::RParan(PosRange::empty()))?;
 
         // Parses Function body
-        let body = Box::new(self.block_statement()?);
+        let body = Box::new(self.block_statement(false)?);
 
         if is_cached {
             Ok(FunctionDeclarationNode::new_cfn(id, params, body))
@@ -281,11 +310,11 @@ impl Parser {
         }
     }
 
-    fn block_statement(&mut self) -> ParseResult {
+    fn block_statement(&mut self, in_loop: bool) -> ParseResult {
         let mut value = Vec::new();
         self.eat(&Token::LBrace(PosRange::empty()))?;
         while !variant_eq(self.curr(), &Token::RBrace(PosRange::empty())) {
-            value.push(self.control_flow_statement()?);
+            value.push(self.control_flow_statement(in_loop)?);
         }
         self.eat(&Token::RBrace(PosRange::empty()))?;
         Ok(BlockStatementNode::new(value))
@@ -620,13 +649,9 @@ impl Parser {
                 self.next()?;
                 Ok(res)
             }
-
-            _ => Err(format!(
-                "Invalid Syntax {}: {}",
-                self.curr().get_pos(),
-                self.curr().get_name()
-            )
-            .to_string()),
+            _ => Err(self.panic_invalid_syntax(
+                "Expected (, [, {, !, +, -, int, double, bool, str, identifier",
+            )),
         }
     }
 }

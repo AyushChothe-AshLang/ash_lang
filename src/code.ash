@@ -1,14 +1,17 @@
+
 fn main(){
-  let i = 0, nums = [1, 2, 2, 3, 3, 3], counter = {};
-  while (i < len(nums)){
-    let num = get(nums, i);
-    if (!has(counter, num)){
-      counter = set(counter, num, 1);
-    } else {
-      let val = get(counter, num);
-      counter = set(counter, num, (val + 1));
+  let a=[1,2,"a","b",[3,4,5]],dict={1:2,2:3,3:4};
+  if(true){
+  let a=[1,2,"a","b",[3,4,5]],dict={1:2,2:3,3:4};
+
+  }elif(false){
+  let x=10;
+  }elif(false){
+    {
+
+  let x=10;
     }
-    i += 1;
+  
+  }elif(fals()){
   }
-  println(counter);
 }

@@ -1,6 +1,7 @@
 use std::env::args;
 use std::fs;
 
+use ash_lang::formatter::Formatter;
 use ash_lang::interpreter::Interpreter;
 use ash_lang::lexer::Lexer;
 use ash_lang::parser::Parser;
@@ -51,7 +52,16 @@ fn main() -> Result<(), String> {
 
         return Ok(());
     } else if cmd == "fmt".to_string() {
-        return Err("Formatter is in development 😎".to_string());
+        let mut lexer = Lexer::new(code);
+        let tokens = lexer.tokenize()?;
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse()?;
+        let mut formatter = Formatter::new(4);
+
+        println!("{}", formatter.format(ast));
+        return Ok(());
+
+        // return Err("Formatter is in development 😎".to_string());
     }
 
     Err("Something went wrong".to_string())

@@ -1,7 +1,11 @@
 use ordered_float::OrderedFloat;
 
 use crate::values::Value;
-use std::{cell::RefCell, collections::HashMap, fmt::Debug};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt::{Debug, Display},
+};
 
 // Node
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -27,6 +31,8 @@ pub enum Node {
     IfStatement(IfStatementNode),
     ElifStatement(ElifStatementNode),
     Return(ReturnNode),
+    Break,
+    Continue,
 }
 
 // IntNode
@@ -82,11 +88,29 @@ pub enum UnaryArithmetic {
     Plus,
     Minus,
 }
+impl Display for UnaryArithmetic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnaryArithmetic::Plus => write!(f, "+"),
+            UnaryArithmetic::Minus => write!(f, "-"),
+        }
+    }
+}
+
 // UnaryOperator
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryOperator {
     Not,
 }
+
+impl Display for UnaryOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnaryOperator::Not => write!(f, "!"),
+        }
+    }
+}
+
 // UnaryNumberNode
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnaryNumberNode {
@@ -133,6 +157,22 @@ pub enum Arithmetic {
     TildeDivide, // ~/
     PowerDivide, // ^/
 }
+
+impl Display for Arithmetic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Arithmetic::Addition => write!(f, "+"),
+            Arithmetic::Subtraction => write!(f, "-"),
+            Arithmetic::Multiply => write!(f, "*"),
+            Arithmetic::Divide => write!(f, "/"),
+            Arithmetic::Power => write!(f, "^"),
+            Arithmetic::Modulus => write!(f, "%"),
+            Arithmetic::TildeDivide => write!(f, "~/"),
+            Arithmetic::PowerDivide => write!(f, "^/"),
+        }
+    }
+}
+
 // Comparison Enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Comparison {
@@ -147,6 +187,21 @@ pub enum Comparison {
     Or,
 }
 
+impl Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Comparison::DoubleEquals => write!(f, "=="),
+            Comparison::NotEquals => write!(f, "!="),
+            Comparison::LessThan => write!(f, "<"),
+            Comparison::LessThanEq => write!(f, "<="),
+            Comparison::GreaterThan => write!(f, ">"),
+            Comparison::GreaterThanEq => write!(f, ">="),
+            Comparison::And => write!(f, "&"),
+            Comparison::Or => write!(f, "|"),
+        }
+    }
+}
+
 // Assignment Enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Assignment {
@@ -159,6 +214,22 @@ pub enum Assignment {
     PowerEq,       // ^=
     TildeDivideEq, // ~/=
     PowerDivideEq, // ^/=
+}
+
+impl Display for Assignment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Assignment::Equals => write!(f, "="),
+            Assignment::PlusEq => write!(f, "+="),
+            Assignment::MinusEq => write!(f, "-="),
+            Assignment::MultiplyEq => write!(f, "*="),
+            Assignment::DivideEq => write!(f, "/="),
+            Assignment::ModulusEq => write!(f, "%/"),
+            Assignment::PowerEq => write!(f, "^="),
+            Assignment::TildeDivideEq => write!(f, "~/="),
+            Assignment::PowerDivideEq => write!(f, "^/="),
+        }
+    }
 }
 
 // BinaryOpNumberNode
@@ -406,10 +477,116 @@ impl ElifStatementNode {
 // ReturnNode
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ReturnNode {
-    pub res: Box<Node>,
+    pub res: Option<Box<Node>>,
 }
 impl ReturnNode {
-    pub fn new(res: Box<Node>) -> Node {
+    pub fn new(res: Option<Box<Node>>) -> Node {
         Node::Return(ReturnNode { res })
+    }
+}
+
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Int(_i) => write!(f, "{}", _i.value),
+            Node::Double(_d) => write!(f, "{}", _d.value),
+            Node::Boolean(_b) => write!(f, "{}", _b.value),
+            Node::String(_s) => write!(f, "\"{}\"", _s.value),
+            Node::Identifier(_id) => write!(f, "{}", _id.value),
+            Node::UnaryNumber(_un) => write!(f, "{}{}", _un.op, _un.value),
+            Node::UnaryBoolean(_ub) => write!(f, "{}{}", _ub.op, _ub.value),
+            Node::BinaryOpNumber(_bon) => write!(f, "{} {} {}", _bon.left, _bon.op, _bon.right),
+            Node::BinaryOpBoolean(_bob) => write!(f, "{} {} {}", _bob.left, _bob.op, _bob.right),
+            Node::Assignment(_a) => write!(f, "{} {} {}", _a.id, _a.assign_type, _a.value),
+            Node::Declaration(_dec) => write!(f, "let {} = {};", _dec.id, _dec.value),
+            Node::MultiDeclaration(_mdec) => {
+                write!(f, "let ")?;
+                write!(
+                    f,
+                    "{}",
+                    _mdec
+                        .declarations
+                        .iter()
+                        .map(|_d| {
+                            if let Node::Declaration(_dec) = _d {
+                                return format!("{} = {}", _dec.id, _dec.value);
+                            }
+                            return format!("");
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+                write!(f, ";")
+            }
+            Node::BlockStatement(_blk) => {
+                // for _n in &_blk.value {
+                //     if let &Node::FunctionCall(_) = _n {
+                //         writeln!(f, "\n{};", _n)?;
+                //     } else {
+                //         writeln!(f, "\n{}", _n)?;
+                //     }
+                // }
+                // Ok(())
+                panic!("Default BlockStatement");
+            }
+            Node::FunctionDeclaration(_fnd) => write!(f, "fn {}() {{{}}}", _fnd.id, _fnd.body),
+            Node::FunctionCall(_fnc) => {
+                write!(f, "{}(", _fnc.id)?;
+                write!(
+                    f,
+                    "{}",
+                    _fnc.args
+                        .iter()
+                        .map(|_a| {
+                            return format!("{}", _a);
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+                write!(f, ")")
+            }
+            Node::WhileLoop(_) => todo!(),
+            Node::IfStatement(_) => todo!(),
+            Node::ElifStatement(_) => todo!(),
+            Node::Return(_rtn) => {
+                if let Some(res) = &_rtn.res {
+                    write!(f, "return {};", res)
+                } else {
+                    write!(f, "return;")
+                }
+            }
+            Node::Break => write!(f, "break;"),
+            Node::Continue => write!(f, "continue;"),
+            Node::List(_l) => {
+                write!(f, "[")?;
+                write!(
+                    f,
+                    "{}",
+                    _l.elements
+                        .iter()
+                        .map(|_e| {
+                            return format!("{}", _e);
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+                write!(f, "]")
+            }
+            Node::Map(_m) => {
+                write!(f, "{{")?;
+                write!(
+                    f,
+                    "{}",
+                    _m.elements
+                        .iter()
+                        .map(|_e| {
+                            return format!("{}:{}", _e.0, _e.1);
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )?;
+                write!(f, "}}")
+            }
+        }
     }
 }
