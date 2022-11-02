@@ -23,6 +23,15 @@ impl Formatter {
     }
 
     pub fn format(&mut self, node: Node) -> String {
+        self._format(node)
+            .trim()
+            .trim_end_matches("main();")
+            .trim()
+            .to_string()
+            + "\n"
+    }
+
+    pub fn _format(&mut self, node: Node) -> String {
         match node {
             Node::Int(_i) => format!("{}", _i.value),
             Node::Double(_d) => format!("{}", _d.value),
@@ -33,7 +42,7 @@ impl Formatter {
             Node::UnaryBoolean(_ub) => format!("{}{}", _ub.op, _ub.value),
             Node::BinaryOpNumber(_bon) => format!("{} {} {}", _bon.left, _bon.op, _bon.right),
             Node::BinaryOpBoolean(_bob) => format!("{} {} {}", _bob.left, _bob.op, _bob.right),
-            Node::Assignment(_a) => format!("{} {} {}", _a.id, _a.assign_type, _a.value),
+            Node::Assignment(_a) => format!("{} {} {};", _a.id, _a.assign_type, _a.value),
             Node::Declaration(_dec) => format!("let {} = {};", _dec.id, _dec.value),
             Node::MultiDeclaration(_mdec) => {
                 format!("let ")
@@ -67,7 +76,7 @@ impl Formatter {
                     if let &Node::FunctionCall(_) = _n {
                         out += format!("{};\n", _n).as_str();
                     } else {
-                        out += format!("{}\n", self.format(_n.clone())).as_str();
+                        out += format!("{}\n", self._format(_n.clone())).as_str();
                     }
                 }
                 self.times -= 1;
@@ -78,7 +87,12 @@ impl Formatter {
                 out
             }
             Node::FunctionDeclaration(_fnd) => {
-                format!("fn {}() {}", _fnd.id, self.format(*_fnd.body))
+                format!(
+                    "fn {}({}) {}",
+                    _fnd.id,
+                    _fnd.params.join(", "),
+                    self._format(*_fnd.body)
+                )
             }
             Node::FunctionCall(_fnc) => {
                 format!("{}(", _fnc.id);
@@ -132,22 +146,22 @@ impl Formatter {
                 );
                 format!("}}")
             }
-            Node::WhileLoop(_w) => format!("while ({}) {}", _w.condition, self.format(*_w.body)),
+            Node::WhileLoop(_w) => format!("while ({}) {}", _w.condition, self._format(*_w.body)),
             Node::IfStatement(_if) => {
-                format!("if ({}) {}", _if.condition, self.format(*_if.true_block))
+                format!("if ({}) {}", _if.condition, self._format(*_if.true_block))
                     + format!(
                         "{}",
                         _if.elif_blocks
                             .iter()
                             .map(|_e| {
-                                return self.format(_e.clone());
+                                return self._format(_e.clone());
                             })
                             .collect::<Vec<String>>()
                             .join("")
                     )
                     .as_str()
                     + if _if.else_block.is_some() {
-                        format!(" else {}", self.format(*_if.else_block.unwrap()))
+                        format!(" else {}", self._format(*_if.else_block.unwrap()))
                     } else {
                         format!("")
                     }
@@ -156,9 +170,8 @@ impl Formatter {
             Node::ElifStatement(_elif) => format!(
                 " elif ({}) {}",
                 _elif.condition,
-                self.format(*_elif.true_block)
+                self._format(*_elif.true_block)
             ),
         }
-        .to_string()
     }
 }

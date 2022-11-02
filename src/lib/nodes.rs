@@ -545,9 +545,9 @@ impl Display for Node {
                 )?;
                 write!(f, ")")
             }
-            Node::WhileLoop(_) => todo!(),
-            Node::IfStatement(_) => todo!(),
-            Node::ElifStatement(_) => todo!(),
+            Node::WhileLoop(_) => todo!("WhileLoop"),
+            Node::IfStatement(_) => todo!("IfStatement"),
+            Node::ElifStatement(_) => todo!("ElifStatement"),
             Node::Return(_rtn) => {
                 if let Some(res) = &_rtn.res {
                     write!(f, "return {};", res)

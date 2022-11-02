@@ -1,23 +1,14 @@
-def bubbleSort(arr):
-    i = 0
-    j = 0
-    while i < len(arr):
-        j = 0
-        while j < (len(arr) - 1):
-            x = arr[j]
-            y = arr[j + 1]
-            if x > y:
-                arr[j] = y
-                arr[j + 1] = x
-            j += 1
-        i += 1
-    return arr
+import math
 
 
-def main():
-    nums = [1, 3, 5, 7, 9, 2, 4, 6, 8, 0]
-    print(bubbleSort(nums))
+def sieve(n):
+    nums = list(range(2, n + 1))
+    for i in list(range(2, math.ceil(math.sqrt(n)))):
+        if nums[i - 2] != 0:
+            for j in list(range(i * i, n + 1, i)):
+                nums[j - 2] = 0
+    return [x for x in nums if x != 0]
 
 
 if __name__ == "__main__":
-    main()
+    print(sieve(1000))
