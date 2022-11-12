@@ -52,7 +52,7 @@ impl Scope {
             Some(val) => val.clone(),
             None => {
                 if let Some(_parent) = self.parent.clone() {
-                    return _parent.borrow().get_symbol(key).clone();
+                    return _parent.borrow().get_symbol(key);
                 } else {
                     panic!("Symbol '{key}' not found")
                 }
@@ -69,7 +69,7 @@ impl Scope {
             Some(val) => val.clone(),
             None => {
                 if let Some(_parent) = self.parent.clone() {
-                    return _parent.borrow().get_function(key).clone();
+                    return _parent.borrow().get_function(key);
                 } else {
                     panic!("Function '{key}' not found")
                 }

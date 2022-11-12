@@ -1,3 +1,4 @@
+#![allow(clippy::new_ret_no_self)]
 use ordered_float::OrderedFloat;
 
 use crate::values::Value;
@@ -14,6 +15,7 @@ pub enum Node {
     Double(DoubleNode),
     Boolean(BooleanNode),
     String(StringNode),
+    Comment(CommentNode),
     List(ListNode),
     Map(MapNode),
     Identifier(IdentifierNode),
@@ -56,6 +58,12 @@ pub struct BooleanNode {
 pub struct StringNode {
     pub value: String,
 }
+
+// CommentNode
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CommentNode {
+    pub value: String,
+}
 // ListNode
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ListNode {
@@ -63,9 +71,15 @@ pub struct ListNode {
 }
 
 // MapNode
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct MapNode {
     pub elements: HashMap<Node, Node>,
+}
+
+impl PartialEq for MapNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.elements == other.elements
+    }
 }
 
 impl std::hash::Hash for MapNode {
@@ -351,13 +365,23 @@ impl FunctionCallNode {
 }
 
 // FunctionDeclarationNode
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct FunctionDeclarationNode {
     pub id: String,
     pub params: Vec<String>,
     pub body: Box<Node>,
     pub memo: Option<RefCell<HashMap<Vec<Value>, Value>>>,
 }
+
+impl PartialEq for FunctionDeclarationNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.params == other.params
+            && self.body == other.body
+            && self.memo == other.memo
+    }
+}
+
 impl std::hash::Hash for FunctionDeclarationNode {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
@@ -492,6 +516,7 @@ impl Display for Node {
             Node::Double(_d) => write!(f, "{}", _d.value),
             Node::Boolean(_b) => write!(f, "{}", _b.value),
             Node::String(_s) => write!(f, "\"{}\"", _s.value),
+            Node::Comment(_s) => write!(f, "// {}", _s.value.trim_start()),
             Node::Identifier(_id) => write!(f, "{}", _id.value),
             Node::UnaryNumber(_un) => write!(f, "{}{}", _un.op, _un.value),
             Node::UnaryBoolean(_ub) => write!(f, "{}{}", _ub.op, _ub.value),
@@ -511,7 +536,7 @@ impl Display for Node {
                             if let Node::Declaration(_dec) = _d {
                                 return format!("{} = {}", _dec.id, _dec.value);
                             }
-                            return format!("");
+                            String::new()
                         })
                         .collect::<Vec<String>>()
                         .join(", ")
@@ -537,9 +562,7 @@ impl Display for Node {
                     "{}",
                     _fnc.args
                         .iter()
-                        .map(|_a| {
-                            return format!("{}", _a);
-                        })
+                        .map(|_a| { format!("{}", _a) })
                         .collect::<Vec<String>>()
                         .join(", ")
                 )?;
@@ -564,9 +587,7 @@ impl Display for Node {
                     "{}",
                     _l.elements
                         .iter()
-                        .map(|_e| {
-                            return format!("{}", _e);
-                        })
+                        .map(|_e| { format!("{}", _e) })
                         .collect::<Vec<String>>()
                         .join(", ")
                 )?;
@@ -579,9 +600,7 @@ impl Display for Node {
                     "{}",
                     _m.elements
                         .iter()
-                        .map(|_e| {
-                            return format!("{}:{}", _e.0, _e.1);
-                        })
+                        .map(|_e| { format!("{}:{}", _e.0, _e.1) })
                         .collect::<Vec<String>>()
                         .join(", ")
                 )?;

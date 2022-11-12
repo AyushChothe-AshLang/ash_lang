@@ -71,6 +71,7 @@ impl Interpreter {
             Node::Break => Value::Break,
             Node::Continue => Value::Continue,
             Node::ElifStatement(_) => panic!("This can't happen"),
+            Node::Comment(_) => Value::None,
         }
     }
 
@@ -234,7 +235,7 @@ impl Interpreter {
             },
             Value::StringValue(_left) => match &right {
                 Value::StringValue(_right) => {
-                    if _left == "" {
+                    if _left.is_empty() {
                         right
                     } else {
                         left
@@ -244,7 +245,7 @@ impl Interpreter {
             },
             Value::ListValue(_left) => match &right {
                 Value::ListValue(_right) => {
-                    if _left.len() == 0 {
+                    if _left.is_empty() {
                         right
                     } else {
                         left
@@ -351,7 +352,7 @@ impl Interpreter {
             Value::MapValue(l) => match right {
                 Value::MapValue(r) => match op {
                     Arithmetic::Addition => {
-                        let mut lc = l.clone();
+                        let mut lc = l;
                         for (k, v) in r.iter() {
                             lc.insert(k.clone(), v.clone());
                         }
@@ -435,9 +436,9 @@ impl Interpreter {
                 let val = self.walk(arg, scope);
                 vals.push(val);
             }
-            return (_fn)(vals);
+            (_fn)(vals)
         } else {
-            let _fn = scope.borrow().get_function(id).clone();
+            let _fn = scope.borrow().get_function(id);
 
             // AshLang Function
             let mut vals = vec![];
@@ -450,10 +451,8 @@ impl Interpreter {
             }
 
             // Return Memo Value if CFn
-            if _fn.borrow().memo.is_some() {
-                if _fn.borrow().contains_key(&vals) {
-                    return _fn.borrow().get_cache(&vals);
-                }
+            if _fn.borrow().memo.is_some() && _fn.borrow().contains_key(&vals) {
+                return _fn.borrow().get_cache(&vals);
             }
 
             let mut fn_scope = Scope::new(scope.clone());
@@ -531,8 +530,8 @@ impl Interpreter {
         }
 
         // Run else
-        if let Some(mut else_block) = node.else_block.as_mut() {
-            return self.walk(&mut else_block, scope);
+        if let Some(else_block) = node.else_block.as_mut() {
+            return self.walk(else_block, scope);
         }
 
         Value::None

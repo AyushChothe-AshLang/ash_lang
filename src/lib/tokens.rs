@@ -7,6 +7,7 @@ pub enum Token {
     Double(f64, PosRange),        // 3.14
     Boolean(bool, PosRange),      // 3.14
     String(String, PosRange),     // "AshLang"
+    Comment(String, PosRange),    // // Comment
     Identifier(String, PosRange), // Variables
     Plus(PosRange),               // +
     Minus(PosRange),              // -
@@ -58,7 +59,7 @@ pub enum Token {
     ReturnK(PosRange),   // return
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Position {
     pub line: i64,
     pub column: i64,
@@ -75,7 +76,7 @@ impl Position {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct PosRange {
     pub from: Position,
     pub to: Option<Position>,
@@ -100,6 +101,7 @@ impl Token {
             Token::Double(_, _) => "Double",
             Token::Boolean(_, _) => "Boolean",
             Token::String(_, _) => "String",
+            Token::Comment(_, _) => "Comment",
             Token::Identifier(_, _) => "Identifier",
             Token::Plus(_) => "+",
             Token::Minus(_) => "-",
@@ -158,6 +160,7 @@ impl Token {
             | Token::Double(_, pos)
             | Token::Boolean(_, pos)
             | Token::String(_, pos)
+            | Token::Comment(_, pos)
             | Token::Identifier(_, pos)
             | Token::Plus(pos)
             | Token::Minus(pos)
@@ -214,6 +217,7 @@ impl Token {
             | Token::Double(_, pos)
             | Token::Boolean(_, pos)
             | Token::String(_, pos)
+            | Token::Comment(_, pos)
             | Token::Identifier(_, pos)
             | Token::Plus(pos)
             | Token::Minus(pos)
@@ -281,12 +285,10 @@ impl PosRange {
     fn get_pos(&self) -> String {
         if self == &Self::empty() {
             "".to_string()
+        } else if let Some(to) = self.to.clone() {
+            format!("{}:{}", self.from.get_pos(), to.get_pos())
         } else {
-            if let Some(to) = self.to.clone() {
-                format!("{}:{}", self.from.get_pos(), to.get_pos())
-            } else {
-                format!("{}", self.from.get_pos())
-            }
+            self.from.get_pos()
         }
     }
 

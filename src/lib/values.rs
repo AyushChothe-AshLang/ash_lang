@@ -58,10 +58,10 @@ impl Ord for Value {
         match (self, other) {
             (Value::IntValue(l0), Value::IntValue(r0)) => l0.cmp(r0),
             (Value::IntValue(l0), Value::DoubleValue(r0)) => {
-                OrderedFloat::cmp(&OrderedFloat(*l0 as f64), &r0)
+                OrderedFloat::cmp(&OrderedFloat(*l0 as f64), r0)
             }
             (Value::DoubleValue(l0), Value::IntValue(r0)) => {
-                OrderedFloat::cmp(&l0, &OrderedFloat(*r0 as f64))
+                OrderedFloat::cmp(l0, &OrderedFloat(*r0 as f64))
             }
             (Value::DoubleValue(l0), Value::DoubleValue(r0)) => l0.cmp(r0),
             (Value::StringValue(l0), Value::StringValue(r0)) => l0.len().cmp(&r0.len()),
@@ -98,14 +98,11 @@ impl Display for Value {
             Value::ListValue(l) => {
                 write!(f, "[",)?;
 
-                if l.len() >= 1 {
+                if !l.is_empty() {
                     write!(f, "{}", l[0])?;
                 }
                 if l.len() > 1 {
-                    l.iter()
-                        .skip(1)
-                        .map(|e| write!(f, ", {}", e))
-                        .collect::<std::fmt::Result>()?;
+                    l.iter().skip(1).try_for_each(|e| write!(f, ", {}", e))?;
                 }
                 write!(f, "]",)
             }

@@ -92,13 +92,7 @@ pub fn ash_int(args: Vec<Value>) -> Value {
         Value::IntValue(_i) => *_i as i64,
         Value::DoubleValue(_d) => _d.0 as i64,
         Value::StringValue(_s) => _s.parse::<i64>().expect("int Parsing Error"),
-        Value::BooleanValue(_b) => {
-            if *_b {
-                1
-            } else {
-                0
-            }
-        }
+        Value::BooleanValue(_b) => i64::from(*_b),
         _ => panic!("Invalid Type Conversion"),
     })
 }
@@ -197,7 +191,7 @@ pub fn ash_set(args: Vec<Value>) -> Value {
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
                 if let Value::StringValue(_val) = val {
-                    *_s = (&_s.as_str()[..(*idx as usize)]).to_string()
+                    *_s = _s.as_str()[..(*idx as usize)].to_string()
                         + _val
                         + (&_s.as_str()[(*idx as usize + 1)..]);
                 } else {
@@ -251,7 +245,7 @@ pub fn ash_pop(args: Vec<Value>) -> Value {
         }
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
-                *_s = (&_s.as_str()[..(*idx as usize)]).to_string()
+                *_s = _s.as_str()[..(*idx as usize)].to_string()
                     + (&_s.as_str()[(*idx as usize + 1)..]);
             } else {
                 panic!("Invalid Index")
@@ -298,7 +292,7 @@ pub fn ash_has(args: Vec<Value>) -> Value {
                     return Value::BooleanValue(true);
                 }
             }
-            return Value::BooleanValue(false);
+            Value::BooleanValue(false)
         }
         Value::MapValue(_m) => {
             for k in _m.keys() {
@@ -306,7 +300,7 @@ pub fn ash_has(args: Vec<Value>) -> Value {
                     return Value::BooleanValue(true);
                 }
             }
-            return Value::BooleanValue(false);
+            Value::BooleanValue(false)
         }
         _ => panic!("Invalid argument"),
     }

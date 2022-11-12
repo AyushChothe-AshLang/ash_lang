@@ -37,7 +37,8 @@ impl Formatter {
             Node::Double(_d) => format!("{}", _d.value),
             Node::Boolean(_b) => format!("{}", _b.value),
             Node::String(_s) => format!("\"{}\"", _s.value),
-            Node::Identifier(_id) => format!("{}", _id.value),
+            Node::Comment(_s) => format!("// {}", _s.value.trim_start()),
+            Node::Identifier(_id) => _id.value,
             Node::UnaryNumber(_un) => format!("{}{}", _un.op, _un.value),
             Node::UnaryBoolean(_ub) => format!("{}{}", _ub.op, _ub.value),
             Node::BinaryOpNumber(_bon) => format!("{} {} {}", _bon.left, _bon.op, _bon.right),
@@ -45,23 +46,20 @@ impl Formatter {
             Node::Assignment(_a) => format!("{} {} {};", _a.id, _a.assign_type, _a.value),
             Node::Declaration(_dec) => format!("let {} = {};", _dec.id, _dec.value),
             Node::MultiDeclaration(_mdec) => {
-                format!("let ")
-                    + format!(
-                        "{}",
-                        _mdec
-                            .declarations
-                            .iter()
-                            .map(|_d| {
-                                if let Node::Declaration(_dec) = _d {
-                                    return format!("{} = {}", _dec.id, _dec.value);
-                                }
-                                return format!("");
-                            })
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
-                    .as_str()
-                    + format!(";").as_str()
+                "let ".to_string()
+                    + _mdec
+                        .declarations
+                        .iter()
+                        .map(|_d| {
+                            if let Node::Declaration(_dec) = _d {
+                                return format!("{} = {}", _dec.id, _dec.value);
+                            }
+                            String::new()
+                        })
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                        .as_str()
+                    + ";".to_string().as_str()
             }
             Node::BlockStatement(_blk) => {
                 let mut out = if self.times != 0 {
@@ -75,6 +73,8 @@ impl Formatter {
                     out += self.space().as_str();
                     if let &Node::FunctionCall(_) = _n {
                         out += format!("{};\n", _n).as_str();
+                    } else if let &Node::Comment(_) = _n {
+                        out += format!("{}", _n).as_str();
                     } else {
                         out += format!("{}\n", self._format(_n.clone())).as_str();
                     }
@@ -96,74 +96,55 @@ impl Formatter {
             }
             Node::FunctionCall(_fnc) => {
                 format!("{}(", _fnc.id);
-                format!(
-                    "{}",
-                    _fnc.args
-                        .iter()
-                        .map(|_a| {
-                            return format!("{}", _a);
-                        })
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                );
-                format!(")")
+                _fnc.args
+                    .iter()
+                    .map(|_a| format!("{}", _a))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                ")".to_string()
             }
 
             Node::Return(_rtn) => {
                 if let Some(res) = &_rtn.res {
                     format!("return {};", res)
                 } else {
-                    format!("return;")
+                    "return;".to_string()
                 }
             }
-            Node::Break => format!("break;"),
-            Node::Continue => format!("continue;"),
+            Node::Break => "break;".to_string(),
+            Node::Continue => "continue;".to_string(),
             Node::List(_l) => {
-                format!("[");
-                format!(
-                    "{}",
-                    _l.elements
-                        .iter()
-                        .map(|_e| {
-                            return format!("{}", _e);
-                        })
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                );
-                format!("]")
+                "[".to_string();
+                _l.elements
+                    .iter()
+                    .map(|_e| format!("{}", _e))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                "]".to_string()
             }
             Node::Map(_m) => {
-                format!("{{");
-                format!(
-                    "{}",
-                    _m.elements
-                        .iter()
-                        .map(|_e| {
-                            return format!("{}:{}", _e.0, _e.1);
-                        })
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                );
-                format!("}}")
+                "{".to_string();
+                _m.elements
+                    .iter()
+                    .map(|_e| format!("{}:{}", _e.0, _e.1))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                "}".to_string()
             }
             Node::WhileLoop(_w) => format!("while ({}) {}", _w.condition, self._format(*_w.body)),
             Node::IfStatement(_if) => {
                 format!("if ({}) {}", _if.condition, self._format(*_if.true_block))
-                    + format!(
-                        "{}",
-                        _if.elif_blocks
-                            .iter()
-                            .map(|_e| {
-                                return self._format(_e.clone());
-                            })
-                            .collect::<Vec<String>>()
-                            .join("")
-                    )
-                    .as_str()
+                    + _if
+                        .elif_blocks
+                        .iter()
+                        .map(|_e| self._format(_e.clone()))
+                        .collect::<Vec<String>>()
+                        .join("")
+                        .as_str()
                     + if _if.else_block.is_some() {
                         format!(" else {}", self._format(*_if.else_block.unwrap()))
                     } else {
-                        format!("")
+                        String::new()
                     }
                     .as_str()
             }

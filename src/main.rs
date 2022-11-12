@@ -32,7 +32,7 @@ fn main() -> Result<(), String> {
 
     let code = fs::read_to_string(file).map_err(|x| format!("{}", x))?;
 
-    if cmd == "run".to_string() {
+    if cmd == *"run" {
         let mut lexer = Lexer::new(code);
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);
@@ -43,7 +43,7 @@ fn main() -> Result<(), String> {
         interpreter.eval();
 
         return Ok(());
-    } else if cmd == "analyze".to_string() {
+    } else if cmd == *"analyze" {
         // Analyzes the Code
         let mut lexer = Lexer::new(code);
         let tokens = lexer.tokenize()?;
@@ -51,7 +51,7 @@ fn main() -> Result<(), String> {
         let _ = parser.parse()?;
 
         return Ok(());
-    } else if cmd == "fmt".to_string() {
+    } else if cmd == *"fmt" {
         let mut lexer = Lexer::new(code);
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);

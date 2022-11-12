@@ -35,5 +35,5 @@ pub async fn analyze(code: String) -> Result<String, String> {
     let mut parser = Parser::new(tokens);
     let _ = parser.parse()?;
 
-    Ok(format!(""))
+    Ok(String::new())
 }

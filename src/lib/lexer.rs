@@ -1,6 +1,6 @@
 use crate::{
     tokens::{PosRange, Position},
-    utils::utils::is_keyword,
+    utils::is_keyword,
 };
 
 use super::tokens::Token;
@@ -138,15 +138,8 @@ impl Lexer {
             is_keyword(id.as_str(), PosRange::new(from.clone(), Some(to.clone())))
         {
             Ok(keyword)
-        } else if id == "true".to_string() || id == "false".to_string() {
-            Ok(Token::Boolean(
-                if id == "true".to_string() {
-                    true
-                } else {
-                    false
-                },
-                PosRange::new(from, Some(to)),
-            ))
+        } else if id == *"true" || id == *"false" {
+            Ok(Token::Boolean(id == *"true", PosRange::new(from, Some(to))))
         } else {
             Ok(Token::Identifier(id, PosRange::new(from, Some(to))))
         }
@@ -188,6 +181,26 @@ impl Lexer {
         Ok(Token::String(id, PosRange::new(from, Some(to))))
     }
 
+    fn parse_comment(&mut self) -> TokenResult {
+        let mut id = String::from("");
+        let from = self.get_pos();
+
+        // Eat '/'
+        self.next()?;
+        // Eat '/'
+        self.next()?;
+
+        while self.pos < self.code.len() && self.curr() != '\n' {
+            id.push(self.curr());
+
+            self.next()?;
+        }
+
+        let to = self.get_pos();
+
+        Ok(Token::Comment(id, PosRange::new(from, Some(to))))
+    }
+
     pub fn tokenize(&mut self) -> LexResult {
         let mut tokens: Vec<Token> = vec![];
 
@@ -226,11 +239,15 @@ impl Lexer {
                     )?);
                 }
                 '/' => {
-                    tokens.push(self.add_double_char_token(
-                        &mut Token::Divide(PosRange::empty()),
-                        &mut Token::DivideEq(PosRange::empty()),
-                        ['/', '='],
-                    )?);
+                    if self.lookahead() == '/' {
+                        tokens.push(self.parse_comment()?);
+                    } else {
+                        tokens.push(self.add_double_char_token(
+                            &mut Token::Divide(PosRange::empty()),
+                            &mut Token::DivideEq(PosRange::empty()),
+                            ['/', '='],
+                        )?);
+                    }
                 }
                 '%' => {
                     tokens.push(self.add_double_char_token(
@@ -250,7 +267,7 @@ impl Lexer {
                         tokens.push(self.add_triple_char_token(
                             &mut Token::Power(PosRange::empty()),
                             &mut Token::PowerDivide(PosRange::empty()),
-                            &mut &mut Token::PowerDivideEq(PosRange::empty()),
+                            &mut Token::PowerDivideEq(PosRange::empty()),
                             ['^', '/', '='],
                         )?);
                     }
@@ -266,7 +283,7 @@ impl Lexer {
                         tokens.push(self.add_triple_char_token(
                             &mut Token::Tilde(PosRange::empty()),
                             &mut Token::TildeDivide(PosRange::empty()),
-                            &mut &mut Token::TildeDivideEq(PosRange::empty()),
+                            &mut Token::TildeDivideEq(PosRange::empty()),
                             ['~', '/', '='],
                         )?);
                     }

@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use ordered_float::OrderedFloat;
 
 use crate::tokens::PosRange;
-use crate::utils::utils::{get_assignment, get_assignment_from_token};
+use crate::utils::{get_assignment, get_assignment_from_token};
 
 use super::nodes::*;
 use super::tokens::Token;
-use super::utils::utils::variant_eq;
+use super::utils::variant_eq;
 
 type ParseResult = Result<Node, String>;
 
@@ -31,7 +31,7 @@ impl Parser {
     }
 
     fn curr(&self) -> &Token {
-        self.tokens.iter().nth(self.pos).unwrap()
+        self.tokens.get(self.pos).unwrap()
     }
 
     fn contains_tkn(&self, vec: Vec<Token>, curr: &Token) -> bool {
@@ -40,16 +40,16 @@ impl Parser {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     fn lookahead(&self) -> Result<&Token, String> {
         if self.pos + 1 < self.tokens.len()
             && !variant_eq(&Token::EOF(PosRange::empty()), self.curr())
         {
-            Ok(self.tokens.iter().nth(self.pos + 1).unwrap())
+            Ok(self.tokens.get(self.pos + 1).unwrap())
         } else {
-            Err(format!("Reached EOF").to_string())
+            Err("Reached EOF".to_string())
         }
     }
     fn next(&mut self) -> Result<(), String> {
@@ -58,7 +58,7 @@ impl Parser {
             self.pos += 1;
             Ok(())
         } else {
-            Err(format!("Reached EOF").to_string())
+            Err("Reached EOF".to_string())
         }
     }
 
@@ -73,8 +73,7 @@ impl Parser {
                 self.curr().get_pos(),
                 token_type,
                 tkn
-            )
-            .to_string())
+            ))
         }
     }
 
@@ -84,7 +83,7 @@ impl Parser {
             res.push(self.primary_statements()?);
         }
         if !variant_eq(self.curr(), &Token::EOF(PosRange::empty())) {
-            return Err(format!("Invalid Syntax {}", self.curr().get_pos()).to_string());
+            return Err(format!("Invalid Syntax {}", self.curr().get_pos()));
         }
         // Invoke Main
         res.push(FunctionCallNode::new(String::from("main"), Vec::new()));
@@ -98,31 +97,35 @@ impl Parser {
                 // Assignment or FunctionCall
                 match self.lookahead()? {
                     _ if self.contains_tkn(get_assignment(), self.lookahead()?) => {
-                        return self.assignment();
+                        self.assignment()
                     }
                     Token::LParan(_) => {
                         let res = self.function_call_statement();
                         self.eat(&Token::Semicolon(PosRange::empty()))?;
-                        return res;
+                        res
                     }
                     _ => {
                         let res = self.logical_and_or()?;
                         self.eat(&Token::Semicolon(PosRange::empty()))?;
-                        return Ok(res);
+                        Ok(res)
                     }
                 }
             }
             Token::FnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement(false);
+                self.function_declaration_statement(false)
             }
             Token::CFnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement(true);
+                self.function_declaration_statement(true)
             }
             Token::LetK(_) => {
                 // Variable Declaration
-                return self.multi_declaration_node();
+                self.multi_declaration_node()
+            }
+            Token::Comment(value, _) => {
+                // Comment Node
+                self.comment(value.to_owned())
             }
             _ => Err(self.panic_invalid_syntax(
                 "Only (Variable and Function) Declaration are allowed in Global Scope",
@@ -136,55 +139,59 @@ impl Parser {
                 // Assignment or FunctionCall
                 match self.lookahead()? {
                     _ if self.contains_tkn(get_assignment(), self.lookahead()?) => {
-                        return self.assignment();
+                        self.assignment()
                     }
                     Token::LParan(_) => {
                         let res = self.function_call_statement();
                         self.eat(&Token::Semicolon(PosRange::empty()))?;
-                        return res;
+                        res
                     }
                     _ => {
                         let res = self.logical_and_or();
                         self.eat(&Token::Semicolon(PosRange::empty()))?;
-                        return res;
+                        res
                     }
                 }
             }
             Token::FnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement(false);
+                self.function_declaration_statement(false)
             }
             Token::CFnK(_) => {
                 // Function Declaration
-                return self.function_declaration_statement(true);
+                self.function_declaration_statement(true)
             }
             Token::LetK(_) => {
                 // Variable Declaration
-                return self.multi_declaration_node();
+                self.multi_declaration_node()
             }
             Token::LBrace(_) => {
                 // Block Statement
-                return self.block_statement(in_loop);
+                self.block_statement(in_loop)
             }
             Token::IfK(_) => {
                 // If Statement
-                return self.if_statement(in_loop);
+                self.if_statement(in_loop)
             }
             Token::WhileK(_) => {
                 // While Loop
-                return self.while_loop_statement();
+                self.while_loop_statement()
             }
             Token::ReturnK(_) => {
                 // Return Statement
-                return self.return_statement();
+                self.return_statement()
             }
             Token::BreakK(_) => {
                 // Break Statement
-                return self.break_statement(in_loop);
+                self.break_statement(in_loop)
             }
             Token::ContinueK(_) => {
                 // Continue Statement
-                return self.continue_statement(in_loop);
+                self.continue_statement(in_loop)
+            }
+            Token::Comment(value, _) => {
+                // Comment Node
+                self.comment(value.to_owned())
             }
             _ => {
                 let res = self.logical_and_or();
@@ -192,6 +199,11 @@ impl Parser {
                 res
             }
         }
+    }
+
+    fn comment(&mut self, value: String) -> ParseResult {
+        self.next()?;
+        Ok(Node::Comment(CommentNode { value }))
     }
 
     fn return_statement(&mut self) -> ParseResult {
@@ -235,8 +247,8 @@ impl Parser {
         while self.pos < self.tokens.len()
             && variant_eq(self.curr(), &Token::ElifK(PosRange::empty()))
         {
-            self.eat(&&Token::ElifK(PosRange::empty()))?;
-            self.eat(&&Token::LParan(PosRange::empty()))?;
+            self.eat(&Token::ElifK(PosRange::empty()))?;
+            self.eat(&Token::LParan(PosRange::empty()))?;
 
             let condition = Box::new(self.logical_and_or()?);
             self.eat(&Token::RParan(PosRange::empty()))?;
@@ -247,7 +259,7 @@ impl Parser {
         // Parse else block
         let mut else_block = None;
         if variant_eq(self.curr(), &Token::ElseK(PosRange::empty())) {
-            self.eat(&&Token::ElseK(PosRange::empty()))?;
+            self.eat(&Token::ElseK(PosRange::empty()))?;
             else_block = Some(Box::new(self.block_statement(in_loop)?));
         }
         Ok(IfStatementNode::new(
@@ -363,7 +375,7 @@ impl Parser {
     fn identifier(&mut self) -> Result<String, String> {
         let res = match self.curr() {
             Token::Identifier(_id, _) => _id.clone(),
-            _ => return Err(format!("Expected Identifier").to_string()),
+            _ => return Err("Expected Identifier".to_string()),
         };
         self.next()?;
         Ok(res)
@@ -402,7 +414,7 @@ impl Parser {
                 while self.pos < self.tokens.len()
                     && !variant_eq(self.curr(), &Token::RSquare(PosRange::empty()))
                 {
-                    self.eat(&&Token::Comma(PosRange::empty()))?;
+                    self.eat(&Token::Comma(PosRange::empty()))?;
                     let elem = self.logical_and_or()?;
                     elements.push(elem);
                 }
@@ -415,7 +427,8 @@ impl Parser {
     }
 
     fn map_literal(&mut self) -> ParseResult {
-        let mut elements = HashMap::new();
+        #[allow(clippy::mutable_key_type)]
+        let mut elements: HashMap<Node, Node> = HashMap::new();
 
         self.eat(&Token::LBrace(PosRange::empty()))?;
 
@@ -428,7 +441,7 @@ impl Parser {
                 while self.pos < self.tokens.len()
                     && !variant_eq(self.curr(), &Token::RBrace(PosRange::empty()))
                 {
-                    self.eat(&&Token::Comma(PosRange::empty()))?;
+                    self.eat(&Token::Comma(PosRange::empty()))?;
                     let key = self.logical_and_or()?;
                     self.eat(&Token::Colon(PosRange::empty()))?;
                     let val = self.logical_and_or()?;
