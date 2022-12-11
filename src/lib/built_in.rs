@@ -134,28 +134,33 @@ pub fn ash_max(args: Vec<Value>) -> Value {
     max.to_owned()
 }
 
-pub fn ash_get(args: Vec<Value>) -> Value {
+pub fn ash_get(mut args: Vec<Value>) -> Value {
     if args.len() != 2 {
         panic!("Invalid arguments")
     }
 
-    let this = args.first().expect("Expected at least 1 argument found 0");
-    let idx_val = args.get(1).expect("Expected index/key as second argument");
+    let idx_val = args
+        .get(1)
+        .expect("Expected index/key as second argument")
+        .clone();
+    let mut this = args
+        .first_mut()
+        .expect("Expected at least 1 argument found 0");
 
-    match this {
+    match &mut this {
         Value::ListValue(_l) => {
             if let Value::IntValue(idx) = idx_val {
-                _l.get(*idx as usize).expect("Index out of bounds").clone()
+                _l.remove(idx as usize)
             } else {
                 panic!("Invalid Index")
             }
         }
-        Value::MapValue(_m) => _m.get(idx_val).expect("Key not found").clone(),
+        Value::MapValue(_m) => _m.get(&idx_val).expect("Key not found").clone(),
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
                 Value::StringValue(
                     _s.chars()
-                        .nth(*idx as usize)
+                        .nth(idx as usize)
                         .expect("Index out of bounds")
                         .to_string(),
                 )
@@ -167,33 +172,41 @@ pub fn ash_get(args: Vec<Value>) -> Value {
     }
 }
 
-pub fn ash_set(args: Vec<Value>) -> Value {
+pub fn ash_set(mut args: Vec<Value>) -> Value {
     if args.len() != 3 {
         panic!("Invalid arguments")
     }
 
-    let this = args.first().expect("Expected at least 1 argument found 0");
-    let mut this_mut = this.clone();
-    let idx_val = args.get(1).expect("Expected index/key as second argument");
-    let val = args.get(2).expect("Expected value as third argument");
+    let idx_val = args
+        .get(1)
+        .expect("Expected index/key as second argument")
+        .clone();
+    let val = args
+        .get(2)
+        .expect("Expected value as third argument")
+        .clone();
 
-    match &mut this_mut {
+    let mut this = args
+        .first_mut()
+        .expect("Expected at least 1 argument found 0");
+
+    match &mut this {
         Value::ListValue(_l) => {
             if let Value::IntValue(idx) = idx_val {
-                _l[(*idx as usize)] = val.clone();
+                _l[(idx as usize)] = val;
             } else {
                 panic!("Invalid Index")
             }
         }
         Value::MapValue(_m) => {
-            _m.insert(idx_val.clone(), val.clone());
+            _m.insert(idx_val, val);
         }
         Value::StringValue(_s) => {
             if let Value::IntValue(idx) = idx_val {
                 if let Value::StringValue(_val) = val {
-                    *_s = _s.as_str()[..(*idx as usize)].to_string()
-                        + _val
-                        + (&_s.as_str()[(*idx as usize + 1)..]);
+                    *_s = _s.as_str()[..(idx as usize)].to_string()
+                        + &_val
+                        + (&_s.as_str()[(idx as usize + 1)..]);
                 } else {
                     panic!("Invalid Value")
                 }
@@ -203,7 +216,7 @@ pub fn ash_set(args: Vec<Value>) -> Value {
         }
         _ => panic!("Invalid argument"),
     }
-    this_mut
+    args.remove(0)
 }
 
 pub fn ash_len(args: Vec<Value>) -> Value {

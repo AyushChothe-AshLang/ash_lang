@@ -57,16 +57,16 @@ Format the code
 
 ## 📦Example
 ```rust
-// AshLang code to count the occurence of numbers in a map
+// AshLang code to count the occurrence of numbers in a map
 fn main(){
   let i = 0, nums = [1, 2, 2, 3, 3, 3], counter = {};
   while (i < len(nums)){
-    let num = at(nums, i);
-    if (!isPresent(counter, num)){
-      set(counter, num, 1);
+    let num = get(nums, i);
+    if (!has(counter, num)){
+      counter = set(counter, num, 1);
     } else {
       let val = get(counter, num);
-      set(counter, num, (val + 1));
+      counter = set(counter, num, (val + 1));
     }
     i += 1;
   }
